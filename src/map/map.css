@@ -1,0 +1,38 @@
+/* Include borders and padding inside an element's declared size. */
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  display: flex;
+  flex-direction: column;
+  font-family: Arial, sans-serif;
+}
+
+.app-header {
+  padding: 12px 20px;
+  color: white;
+  background-color: #164e63;
+}
+
+.app-header h1 {
+  margin: 0;
+  font-size: 24px;
+}
+
+.app-header p {
+  margin: 4px 0 0;
+}
+
+#map {
+  /* Fill all remaining space beneath the header. */
+  flex: 1;
+  min-height: 0;
+  width: 100%;
+}

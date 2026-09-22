@@ -1,0 +1,110 @@
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 380px;
+  margin: 0;
+  color: #1f2933;
+  background-color: #f4f8fa;
+  font-family: Arial, sans-serif;
+}
+
+.popup-header {
+  padding: 16px;
+  color: white;
+  background-color: #164e63;
+}
+
+.popup-header h1 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.popup-header p {
+  margin: 4px 0 0;
+  font-size: 14px;
+}
+
+.tabs {
+  display: flex;
+  border-bottom: 1px solid #cbd5e1;
+  background-color: white;
+}
+
+.tab-button {
+  flex: 1;
+  padding: 12px 8px;
+  border: 0;
+  border-bottom: 3px solid transparent;
+  color: #475569;
+  background-color: transparent;
+  cursor: pointer;
+}
+
+.tab-button:hover {
+  background-color: #f0f9ff;
+}
+
+.tab-button.active {
+  border-bottom-color: #0284c7;
+  color: #0369a1;
+  font-weight: bold;
+}
+/* overflow-y: auto will make it scroll when we add more records. */
+.stocking-list {
+  max-height: 420px;
+  padding: 12px;
+  overflow-y: auto;
+}
+
+.stocking-card {
+  padding: 14px;
+  border: 1px solid #d7e1e7;
+  border-radius: 8px;
+  background-color: white;
+}
+
+.card-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.card-heading h2 {
+  margin: 0;
+  font-size: 17px;
+}
+
+.favorite-button {
+  padding: 2px 6px;
+  border: 0;
+  color: #b45309;
+  background-color: transparent;
+  font-size: 24px;
+  cursor: pointer;
+}
+
+.stocking-details,
+.stocking-week {
+  margin: 8px 0;
+  font-size: 14px;
+}
+
+.stocking-details {
+  color: #475569;
+}
+
+.map-link {
+  display: inline-block;
+  margin-top: 6px;
+  color: #0369a1;
+  font-size: 14px;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.map-link:hover {
+  text-decoration: underline;
+}

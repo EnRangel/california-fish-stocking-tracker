@@ -1,0 +1,24 @@
+{
+  "name": "fishingextension",
+  "version": "1.0.0",
+  "description": "A Firefox extension that displays recent and upcoming California fish stocking locations on an interactive map.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EnRangel/fishingExtension.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/EnRangel/fishingExtension/issues"
+  },
+  "homepage": "https://github.com/EnRangel/fishingExtension#readme",
+  "dependencies": {
+    "leaflet": "^1.9.4"
+  }
+}

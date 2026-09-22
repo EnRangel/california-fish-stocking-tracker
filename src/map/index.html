@@ -5,12 +5,21 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
     <title>California Fish Stocking Map</title>
+
+    <link rel="stylesheet" href="../../vendor/leaflet/leaflet.css">
+    <link rel="stylesheet" href="map.css">
   </head>
 
   <body>
-    <main>
+    <header class="app-header">
       <h1>California Fish Stocking Map</h1>
-      <p>The extension shell is working.</p>
-    </main>
+      <p>Recent and upcoming CDFW fish stockings</p>
+    </header>
+
+    <main id="map" aria-label="Fish stocking map"></main>
+
+    <!-- Order matters because map.js will use the L object created by leaflet.js. -->
+    <script src="../../vendor/leaflet/leaflet.js"></script>
+    <script src="map.js"></script>
   </body>
 </html>
