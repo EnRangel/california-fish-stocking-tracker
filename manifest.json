@@ -1,12 +1,10 @@
 {
   "manifest_version": 3,
-  "name": "California Fish Stocking Map",
+  "name": "California Fish Stocking",
   "version": "0.1.0",
-  "description": "Displays recent and upcoming California fish stockings on a map.",
+  "description": "Shows recent and upcoming California fish stockings.",
   "action": {
-    "default_title": "Open California Fish Stocking Map"
-  },
-  "background": {
-    "scripts": ["src/background.js"]
+    "default_title": "View California fish stockings",
+    "default_popup": "src/popup/index.html"
   }
 }
