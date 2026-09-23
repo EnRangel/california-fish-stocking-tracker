@@ -15,21 +15,51 @@
       <p>Find recently stocked waters</p>
     </header>
 
-    <nav class="tabs" aria-label="Stocking categories">
-      <button class="tab-button active" type="button">
-        Recent
-      </button>
+    <!-- data-tab: stores a value JavaScript can read.
+        aria-selected: communicates the selected tab to assistive technology.
+        aria-controls: identifies the content controlled by the button.
+        aria-live="polite": announces updated list content without interrupting the user. -->
+  <nav class="tabs" role="tablist" aria-label="Stocking categories">
+    <button
+      class="tab-button active"
+      type="button"
+      role="tab"
+      data-tab="recent"
+      aria-selected="true"
+      aria-controls="stocking-list"
+    >
+      Recent
+    </button>
 
-      <button class="tab-button" type="button">
-        Upcoming
-      </button>
+    <button
+      class="tab-button"
+      type="button"
+      role="tab"
+      data-tab="upcoming"
+      aria-selected="false"
+      aria-controls="stocking-list"
+    >
+      Upcoming
+    </button>
 
-      <button class="tab-button" type="button">
-        Favorites
-      </button>
-    </nav>
+    <button
+      class="tab-button"
+      type="button"
+      role="tab"
+      data-tab="favorites"
+      aria-selected="false"
+      aria-controls="stocking-list"
+    >
+      Favorites
+    </button>
+  </nav>
 
-    <main id="stocking-list" class="stocking-list"></main>
+<main
+  id="stocking-list"
+  class="stocking-list"
+  role="tabpanel"
+  aria-live="polite"
+></main>
       <article class="stocking-card">
         <div class="card-heading">
           <h2>Lone Pine Creek</h2>
