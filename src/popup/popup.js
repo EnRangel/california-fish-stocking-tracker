@@ -1,6 +1,6 @@
-// Sample data
-// These are real sample records retrieved from CDFW.
-// Later, the extension will fetch records instead of defining them here.
+// Sample stocking data
+// These records let us develop the interface before connecting the live API.
+// Their status values are fixed sample values, not today's live CDFW status.
 
 const sampleStockings = [
   {
@@ -11,8 +11,7 @@ const sampleStockings = [
     plantingWeekStart: "2026-09-13",
     latitude: 36.99842834,
     longitude: -118.25787354,
-    status: "recent",
-    isFavorite: false
+    status: "recent"
   },
   {
     waterId: 500860,
@@ -22,18 +21,73 @@ const sampleStockings = [
     plantingWeekStart: "2026-09-20",
     latitude: 36.59597397,
     longitude: -118.0977478,
-    status: "current",
-    isFavorite: true
+    status: "current"
   }
 ];
 
-// References to existing HTML elements
-// These variables let JavaScript work with elements already present in the page.
+// HTML element references
+// These variables hold references to elements that already exist in index.html.
+
 const stockingList = document.querySelector("#stocking-list");
 const tabButtons = document.querySelectorAll(".tab-button");
 
+// Popup state
+// State is information that can change while the popup is running.
+
+let favoriteWaterIds = [];
+let activeTabName = "recent";
+
+// Favorite storage
+// Read the saved array of favorite water IDs from Firefox storage.
+async function loadFavoriteWaterIds() {
+  const storedData =
+    await browser.storage.local.get("favoriteWaterIds");
+
+  // Validate the stored value before using it as an array.
+  if (Array.isArray(storedData.favoriteWaterIds)) {
+    return storedData.favoriteWaterIds;
+  }
+
+  // New users do not have saved favorites, so return an empty array.
+  return [];
+}
+
+// Save the current favorite-water array into Firefox storage.
+async function saveFavoriteWaterIds() {
+  await browser.storage.local.set({
+    favoriteWaterIds: favoriteWaterIds
+  });
+}
+
+// Check whether one water ID is currently in the favorites array.
+function isFavoriteWater(waterId) {
+  return favoriteWaterIds.includes(waterId);
+}
+
+// Add or remove a water ID, save the result, and refresh the current tab.
+async function toggleFavorite(waterId) {
+  const isAlreadyFavorite = isFavoriteWater(waterId);
+
+  if (isAlreadyFavorite) {
+    // filter() creates a new array that excludes the selected water ID.
+    favoriteWaterIds = favoriteWaterIds.filter(
+      (favoriteWaterId) => {
+        return favoriteWaterId !== waterId;
+      }
+    );
+  } else {
+    // push() adds the selected water ID to the end of the array.
+    favoriteWaterIds.push(waterId);
+  }
+
+  // Wait until Firefox finishes saving before refreshing the interface.
+  await saveFavoriteWaterIds();
+
+  selectTab(activeTabName);
+}
+
 // Google Maps URL creation
-// Create a Google Maps search URL for one latitude and longitude.
+// Create a Google Maps search URL using a stocking's coordinates.
 function createGoogleMapsUrl(latitude, longitude) {
   const googleMapsUrl = new URL(
     "https://www.google.com/maps/search/"
@@ -59,7 +113,7 @@ function formatPlantingWeek(dateString) {
   const month = dateParts[1];
   const day = dateParts[2];
 
-  // JavaScript counts months from zero, so we subtract one from the month.
+  // JavaScript counts months from zero, so subtract one from the month.
   const plantingDate = new Date(year, month - 1, day);
 
   return plantingDate.toLocaleDateString("en-US", {
@@ -69,9 +123,10 @@ function formatPlantingWeek(dateString) {
   });
 }
 
-// Add the correct label after one or more county names.
+// Add the appropriate singular or plural county label.
 function formatCounties(counties) {
   const hasMultipleCounties = counties.includes(",");
+
   const countyLabel = hasMultipleCounties
     ? "Counties"
     : "County";
@@ -86,37 +141,41 @@ function createStockingCard(stocking) {
   const card = document.createElement("article");
   card.classList.add("stocking-card");
 
-  // Create the card heading.
+  // Create the heading that contains the water name and favorite button.
   const cardHeading = document.createElement("div");
   cardHeading.classList.add("card-heading");
 
   const waterName = document.createElement("h2");
   waterName.textContent = stocking.waterName;
 
-  // Create the favorite star.
+  // Determine how the favorite button should currently appear.
+  const isFavorite = isFavoriteWater(stocking.waterId);
+
   const favoriteButton = document.createElement("button");
   favoriteButton.classList.add("favorite-button");
   favoriteButton.type = "button";
-
-  const favoriteAction = stocking.isFavorite
-    ? "Remove"
-    : "Add";
-
-  favoriteButton.textContent = stocking.isFavorite
-    ? "★"
-    : "☆";
-
-  favoriteButton.setAttribute(
-    "aria-label",
-    `${favoriteAction} ${stocking.waterName} ${
-      stocking.isFavorite ? "from" : "to"
-    } favorites`
-  );
+  favoriteButton.textContent = isFavorite ? "★" : "☆";
 
   favoriteButton.setAttribute(
     "aria-pressed",
-    String(stocking.isFavorite)
+    String(isFavorite)
   );
+
+  favoriteButton.setAttribute(
+    "aria-label",
+    isFavorite
+      ? `Remove ${stocking.waterName} from favorites`
+      : `Add ${stocking.waterName} to favorites`
+  );
+
+  // Save the updated favorite when the user selects the star.
+  favoriteButton.addEventListener("click", async () => {
+    try {
+      await toggleFavorite(stocking.waterId);
+    } catch (error) {
+      console.error("Could not update favorites:", error);
+    }
+  });
 
   cardHeading.append(waterName, favoriteButton);
 
@@ -132,18 +191,20 @@ function createStockingCard(stocking) {
   stockingWeek.textContent =
     `Week of ${formatPlantingWeek(stocking.plantingWeekStart)}`;
 
-  // Create the link to the water's coordinates in Google Maps.
+  // Create the external Google Maps link.
   const mapLink = document.createElement("a");
   mapLink.classList.add("map-link");
+
   mapLink.href = createGoogleMapsUrl(
     stocking.latitude,
     stocking.longitude
   );
+
   mapLink.target = "_blank";
   mapLink.rel = "noopener noreferrer";
   mapLink.textContent = "Open in Google Maps";
 
-  // Put all of the completed sections inside the card.
+  // Put all completed sections inside the card.
   card.append(
     cardHeading,
     stockingDetails,
@@ -173,20 +234,20 @@ function getStockingsForTab(tabName) {
 
   if (tabName === "favorites") {
     return sampleStockings.filter((stocking) => {
-      return stocking.isFavorite;
+      return isFavoriteWater(stocking.waterId);
     });
   }
 
-  // Return an empty array if an unknown tab name is provided.
+  // Unknown tab names receive an empty array.
   return [];
 }
 
 // List rendering
-// Clear the current list and render the provided stocking records.
+// Clear the current list and render the supplied stocking records.
 function renderStockings(stockings) {
   stockingList.replaceChildren();
 
-  // Display a message when the selected category has no records.
+  // Display an empty-state message when no records match.
   if (stockings.length === 0) {
     const emptyMessage = document.createElement("p");
     emptyMessage.classList.add("empty-message");
@@ -197,7 +258,7 @@ function renderStockings(stockings) {
     return;
   }
 
-  // Create and append one card for every stocking record.
+  // Create and append one card for each matching stocking.
   for (const stocking of stockings) {
     const card = createStockingCard(stocking);
     stockingList.append(card);
@@ -205,9 +266,12 @@ function renderStockings(stockings) {
 }
 
 // Tab selection
-// Mark one tab as active and display its matching stocking records.
+// Mark one tab as active and display its matching records.
 function selectTab(tabName) {
-  // Update the visual and accessibility state of every tab button.
+  // Remember the selected tab so favorite updates can return to it.
+  activeTabName = tabName;
+
+  // Update each tab's visual and accessibility state.
   for (const tabButton of tabButtons) {
     const isSelected =
       tabButton.dataset.tab === tabName;
@@ -220,15 +284,15 @@ function selectTab(tabName) {
     );
   }
 
-  // Filter and display the records for the selected tab.
+  // Find and render the records belonging to the selected tab.
   const matchingStockings =
     getStockingsForTab(tabName);
 
   renderStockings(matchingStockings);
 }
 
-// Event listeners
-// Listen for a click on each of the three tab buttons.
+// Tab event listeners
+// Run selectTab() whenever one of the category buttons is clicked.
 for (const tabButton of tabButtons) {
   tabButton.addEventListener("click", () => {
     const selectedTabName = tabButton.dataset.tab;
@@ -236,6 +300,19 @@ for (const tabButton of tabButtons) {
   });
 }
 
-// Initial display
-// Show recent stockings when the popup first opens.
-selectTab("recent");
+// Popup initialization
+// Load saved state before rendering the popup for the first time.
+async function initializePopup() {
+  try {
+    favoriteWaterIds = await loadFavoriteWaterIds();
+  } catch (error) {
+    // Keep the popup usable even if reading storage fails.
+    console.error("Could not load favorites:", error);
+    favoriteWaterIds = [];
+  }
+
+  selectTab("recent");
+}
+
+// Start the popup after all functions and event listeners have been defined.
+initializePopup();
