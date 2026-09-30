@@ -108,3 +108,10 @@ body {
 .map-link:hover {
   text-decoration: underline;
 }
+
+/* Style the message shown when a category has no records. */
+.empty-message {
+  margin: 20px 8px;
+  color: #64748b;
+  text-align: center;
+} 

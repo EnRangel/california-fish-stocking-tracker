@@ -1,7 +1,4 @@
-// -----------------------------------------------------------------------------
 // Sample data
-// -----------------------------------------------------------------------------
-//
 // These are real sample records retrieved from CDFW.
 // Later, the extension will fetch records instead of defining them here.
 
@@ -30,19 +27,12 @@ const sampleStockings = [
   }
 ];
 
-// -----------------------------------------------------------------------------
 // References to existing HTML elements
-// -----------------------------------------------------------------------------
-//
 // These variables let JavaScript work with elements already present in the page.
-
 const stockingList = document.querySelector("#stocking-list");
 const tabButtons = document.querySelectorAll(".tab-button");
 
-// -----------------------------------------------------------------------------
 // Google Maps URL creation
-// -----------------------------------------------------------------------------
-
 // Create a Google Maps search URL for one latitude and longitude.
 function createGoogleMapsUrl(latitude, longitude) {
   const googleMapsUrl = new URL(
@@ -58,10 +48,7 @@ function createGoogleMapsUrl(latitude, longitude) {
   return googleMapsUrl.toString();
 }
 
-// -----------------------------------------------------------------------------
 // Display formatting
-// -----------------------------------------------------------------------------
-
 // Convert a date such as "2026-09-20" into "September 20, 2026".
 function formatPlantingWeek(dateString) {
   const dateParts = dateString
@@ -92,10 +79,7 @@ function formatCounties(counties) {
   return `${counties} ${countyLabel}`;
 }
 
-// -----------------------------------------------------------------------------
 // Stocking-card creation
-// -----------------------------------------------------------------------------
-
 // Build and return one stocking card from a stocking object.
 function createStockingCard(stocking) {
   // Create the outer card.
@@ -170,10 +154,7 @@ function createStockingCard(stocking) {
   return card;
 }
 
-// -----------------------------------------------------------------------------
 // Record filtering
-// -----------------------------------------------------------------------------
-
 // Return only the records that belong in the selected tab.
 function getStockingsForTab(tabName) {
   if (tabName === "recent") {
@@ -200,10 +181,7 @@ function getStockingsForTab(tabName) {
   return [];
 }
 
-// -----------------------------------------------------------------------------
 // List rendering
-// -----------------------------------------------------------------------------
-
 // Clear the current list and render the provided stocking records.
 function renderStockings(stockings) {
   stockingList.replaceChildren();
@@ -226,10 +204,7 @@ function renderStockings(stockings) {
   }
 }
 
-// -----------------------------------------------------------------------------
 // Tab selection
-// -----------------------------------------------------------------------------
-
 // Mark one tab as active and display its matching stocking records.
 function selectTab(tabName) {
   // Update the visual and accessibility state of every tab button.
@@ -252,10 +227,7 @@ function selectTab(tabName) {
   renderStockings(matchingStockings);
 }
 
-// -----------------------------------------------------------------------------
 // Event listeners
-// -----------------------------------------------------------------------------
-
 // Listen for a click on each of the three tab buttons.
 for (const tabButton of tabButtons) {
   tabButton.addEventListener("click", () => {
@@ -264,9 +236,6 @@ for (const tabButton of tabButtons) {
   });
 }
 
-// -----------------------------------------------------------------------------
 // Initial display
-// -----------------------------------------------------------------------------
-
 // Show recent stockings when the popup first opens.
 selectTab("recent");
