@@ -9,6 +9,10 @@ const CDFW_QUERY_URL =
 // The MVP defines "recent" as the previous 60 days.
 const RECENT_DAY_COUNT = 60;
 
+// Keep downloaded stocking records for six hours.
+// 6 hours × 60 minutes × 60 seconds × 1,000 milliseconds
+const CACHE_LIFETIME_MS = 6 * 60 * 60 * 1000;
+
 // HTML element references
 // These variables hold references to elements that already exist in index.html.
 
@@ -167,6 +171,96 @@ function normalizeCdfwFeature(feature) {
       attributes.AnnouncePeriod
     )
   };
+}
+
+// -----------------------------------------------------------------------------
+// Stocking-data cache
+// -----------------------------------------------------------------------------
+//
+// The cache prevents a new CDFW request every time the popup opens.
+
+// Read and validate the saved stocking-data cache.
+async function loadStockingCache() {
+  const storedData =
+    await browser.storage.local.get("stockingCache");
+
+  const cache = storedData.stockingCache;
+
+  // Return null when no cache exists.
+  if (!cache) {
+    return null;
+  }
+
+  // Return null if the cached records are not an array.
+  if (!Array.isArray(cache.records)) {
+    return null;
+  }
+
+  // Return null if the cache timestamp is missing or invalid.
+  if (!Number.isFinite(cache.fetchedAt)) {
+    return null;
+  }
+
+  return cache;
+}
+
+// Determine whether a cache is still inside its six-hour lifetime.
+function isStockingCacheFresh(cache) {
+  const currentTime = Date.now();
+  const cacheAge = currentTime - cache.fetchedAt;
+
+  return cacheAge < CACHE_LIFETIME_MS;
+}
+
+// Save normalized records and the current time into Firefox storage.
+async function saveStockingCache(records) {
+  const cache = {
+    records: records,
+    fetchedAt: Date.now()
+  };
+
+  await browser.storage.local.set({
+    stockingCache: cache
+  });
+}
+
+// Load fresh cached records or download new records from CDFW.
+async function loadStockingRecords() {
+  const cache = await loadStockingCache();
+
+  // Use the cache immediately when it is still fresh.
+  if (cache && isStockingCacheFresh(cache)) {
+    console.log("Using fresh cached CDFW records.");
+    return cache.records;
+  }
+
+  try {
+    // Download and normalize a fresh copy from CDFW.
+    const rawFeatures = await fetchCdfwFeatures();
+
+    const normalizedRecords =
+      normalizeCdfwFeatures(rawFeatures);
+
+    // Save the successful response for later popup openings.
+    await saveStockingCache(normalizedRecords);
+
+    console.log("Downloaded fresh CDFW records.");
+
+    return normalizedRecords;
+  } catch (error) {
+    // An expired cache is better than no data during a network failure.
+    if (cache) {
+      console.warn(
+        "CDFW request failed. Using expired cached records.",
+        error
+      );
+
+      return cache.records;
+    }
+
+    // No cached fallback exists, so pass the error to initializePopup().
+    throw error;
+  }
 }
 
 // Check whether a normalized record contains every value needed by the UI.
@@ -521,10 +615,8 @@ async function initializePopup() {
 
   // Download, normalize, and display live stocking records.
   try {
-    const rawFeatures = await fetchCdfwFeatures();
-
     stockingRecords =
-      normalizeCdfwFeatures(rawFeatures);
+      await loadStockingRecords();
 
     console.log(
       `Displaying ${stockingRecords.length} CDFW records.`
