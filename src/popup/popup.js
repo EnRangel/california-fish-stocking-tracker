@@ -135,10 +135,7 @@ async function fetchCdfwFeatures() {
   return responseData.features;
 }
 
-// -----------------------------------------------------------------------------
 // CDFW data normalization
-// -----------------------------------------------------------------------------
-//
 // ArcGIS uses names such as WaterName and Lat.
 // Normalization converts them into names controlled by our application.
 
@@ -177,10 +174,7 @@ function normalizeCdfwFeature(feature) {
   };
 }
 
-// -----------------------------------------------------------------------------
 // Stocking-data cache
-// -----------------------------------------------------------------------------
-//
 // The cache prevents a new CDFW request every time the popup opens.
 
 // Read and validate the saved stocking-data cache.
@@ -427,6 +421,18 @@ function formatCounties(counties) {
   return `${counties} ${countyLabel}`;
 }
 
+function getStatusLabel(status) {
+  if (status === "current") {
+    return "Current schedule";
+  }
+
+  if (status === "future") {
+    return "Future schedule";
+  }
+
+  return "Recently stocked";
+}
+
 // Stocking-card creation
 // Build and return one stocking card from a stocking object.
 function createStockingCard(stocking) {
@@ -471,6 +477,16 @@ function createStockingCard(stocking) {
   });
 
   cardHeading.append(waterName, favoriteButton);
+  // Create a badge that identifies when this stocking occurs.
+  const statusBadge = document.createElement("span");
+
+  statusBadge.classList.add(
+    "stocking-status",
+    `stocking-status--${stocking.status}`
+  );
+
+  statusBadge.textContent =
+    getStatusLabel(stocking.status);
 
   // Create the species and county description.
   const stockingDetails = document.createElement("p");
@@ -500,6 +516,7 @@ function createStockingCard(stocking) {
   // Put all completed sections inside the card.
   card.append(
     cardHeading,
+    statusBadge,
     stockingDetails,
     stockingWeek,
     mapLink
@@ -508,10 +525,7 @@ function createStockingCard(stocking) {
   return card;
 }
 
-// -----------------------------------------------------------------------------
 // Search matching
-// -----------------------------------------------------------------------------
-
 // Check whether a stocking contains the user's search text.
 function doesStockingMatchSearch(stocking, query) {
   // Lowercase both sides so searches are not case-sensitive.
@@ -549,10 +563,7 @@ function doesStockingMatchSearch(stocking, query) {
   );
 }
 
-// -----------------------------------------------------------------------------
 // Record filtering
-// -----------------------------------------------------------------------------
-
 // Return only the records that belong in the selected tab and match the search.
 function getStockingsForTab(tabName) {
   let tabStockings = [];
@@ -660,10 +671,7 @@ for (const tabButton of tabButtons) {
   });
 }
 
-// -----------------------------------------------------------------------------
 // Search event listener
-// -----------------------------------------------------------------------------
-
 // Re-render the active tab whenever the user changes the search text.
 searchInput.addEventListener("input", () => {
   searchText = searchInput.value;

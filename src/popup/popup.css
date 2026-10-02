@@ -119,6 +119,34 @@ body {
   cursor: pointer;
 }
 
+/* Base appearance shared by every stocking-status badge. */
+.stocking-status {
+  display: inline-block;
+  margin-top: 10px;
+  padding: 4px 8px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: bold;
+}
+
+/* Blue represents a stocking that already happened recently. */
+.stocking-status--recent {
+  color: #075985;
+  background-color: #e0f2fe;
+}
+
+/* Green represents the current stocking schedule. */
+.stocking-status--current {
+  color: #166534;
+  background-color: #dcfce7;
+}
+
+/* Purple represents a future scheduled stocking. */
+.stocking-status--future {
+  color: #6b21a8;
+  background-color: #f3e8ff;
+}
+
 .stocking-details,
 .stocking-week {
   margin: 8px 0;
