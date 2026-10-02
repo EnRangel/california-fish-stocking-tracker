@@ -18,6 +18,7 @@ const CACHE_LIFETIME_MS = 6 * 60 * 60 * 1000;
 
 const stockingList = document.querySelector("#stocking-list");
 const tabButtons = document.querySelectorAll(".tab-button");
+const searchInput = document.querySelector("#stocking-search");
 
 // Popup state
 // State is information that can change while the popup is running.
@@ -30,6 +31,9 @@ let favoriteWaterIds = [];
 
 // Remember which tab is currently selected.
 let activeTabName = "recent";
+
+// Store what the user has typed so it can be used across every tab.
+let searchText = "";
 
 // CDFW query construction
 // Convert a Date object into the YYYY-MM-DD format expected by ArcGIS.
@@ -504,11 +508,57 @@ function createStockingCard(stocking) {
   return card;
 }
 
+// -----------------------------------------------------------------------------
+// Search matching
+// -----------------------------------------------------------------------------
+
+// Check whether a stocking contains the user's search text.
+function doesStockingMatchSearch(stocking, query) {
+  // Lowercase both sides so searches are not case-sensitive.
+  const normalizedQuery = query.trim().toLowerCase();
+
+  // An empty search should show every stocking in the selected tab.
+  if (normalizedQuery === "") {
+    return true;
+  }
+
+  const normalizedWaterName =
+    stocking.waterName.toLowerCase();
+
+  const normalizedFishType =
+    stocking.fishType.toLowerCase();
+
+  const normalizedCounties =
+    stocking.counties.toLowerCase();
+
+  // includes() checks whether one string contains another string.
+  const waterNameMatches =
+    normalizedWaterName.includes(normalizedQuery);
+
+  const fishTypeMatches =
+    normalizedFishType.includes(normalizedQuery);
+
+  const countyMatches =
+    normalizedCounties.includes(normalizedQuery);
+
+  // A record is included when any of its searchable fields match.
+  return (
+    waterNameMatches ||
+    fishTypeMatches ||
+    countyMatches
+  );
+}
+
+// -----------------------------------------------------------------------------
 // Record filtering
-// Return only the records that belong in the selected tab.
+// -----------------------------------------------------------------------------
+
+// Return only the records that belong in the selected tab and match the search.
 function getStockingsForTab(tabName) {
+  let tabStockings = [];
+
   if (tabName === "recent") {
-    return stockingRecords.filter((stocking) => {
+    tabStockings = stockingRecords.filter((stocking) => {
       return stocking.status === "recent";
     });
   }
@@ -516,19 +566,21 @@ function getStockingsForTab(tabName) {
   if (tabName === "upcoming") {
     const upcomingStatuses = ["current", "future"];
 
-    return stockingRecords.filter((stocking) => {
+    tabStockings = stockingRecords.filter((stocking) => {
       return upcomingStatuses.includes(stocking.status);
     });
   }
 
   if (tabName === "favorites") {
-    return stockingRecords.filter((stocking) => {
+    tabStockings = stockingRecords.filter((stocking) => {
       return isFavoriteWater(stocking.waterId);
     });
   }
 
-  // Unknown tab names receive an empty array.
-  return [];
+  // Apply the text search after narrowing the records to one tab.
+  return tabStockings.filter((stocking) => {
+    return doesStockingMatchSearch(stocking, searchText);
+  });
 }
 
 // List rendering
@@ -552,8 +604,15 @@ function renderStockings(stockings) {
   if (stockings.length === 0) {
     const emptyMessage = document.createElement("p");
     emptyMessage.classList.add("empty-message");
-    emptyMessage.textContent =
-      "No stocking records were found for this category.";
+
+    // Give a more useful message when a search caused the empty result.
+    if (searchText.trim() !== "") {
+      emptyMessage.textContent =
+        `No stockings matched "${searchText.trim()}".`;
+    } else {
+      emptyMessage.textContent =
+        "No stocking records were found for this category.";
+    }
 
     stockingList.append(emptyMessage);
     return;
@@ -600,6 +659,16 @@ for (const tabButton of tabButtons) {
     selectTab(selectedTabName);
   });
 }
+
+// -----------------------------------------------------------------------------
+// Search event listener
+// -----------------------------------------------------------------------------
+
+// Re-render the active tab whenever the user changes the search text.
+searchInput.addEventListener("input", () => {
+  searchText = searchInput.value;
+  selectTab(activeTabName);
+});
 
 // Load favorites and live CDFW records before displaying the first tab.
 async function initializePopup() {
