@@ -3,6 +3,12 @@
   "name": "California Fish Stocking",
   "version": "0.1.0",
   "description": "Shows recent and upcoming California fish stockings.",
+  "permissions": [
+    "storage"
+  ],
+  "host_permissions": [
+    "https://services2.arcgis.com/*"
+  ],
   "action": {
     "default_title": "View California fish stockings",
     "default_popup": "src/popup/index.html"
