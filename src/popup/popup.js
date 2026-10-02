@@ -1,29 +1,13 @@
-// Sample stocking data
-// These records let us develop the interface before connecting the live API.
-// Their status values are fixed sample values, not today's live CDFW status.
+// CDFW API configuration
+// This is the public ArcGIS query endpoint for CDFW planting locations.
 
-const sampleStockings = [
-  {
-    waterId: 501414,
-    waterName: "Taboose Creek",
-    fishType: "Trout",
-    counties: "Inyo",
-    plantingWeekStart: "2026-09-13",
-    latitude: 36.99842834,
-    longitude: -118.25787354,
-    status: "recent"
-  },
-  {
-    waterId: 500860,
-    waterName: "Lone Pine Creek",
-    fishType: "Trout",
-    counties: "Inyo",
-    plantingWeekStart: "2026-09-20",
-    latitude: 36.59597397,
-    longitude: -118.0977478,
-    status: "current"
-  }
-];
+const CDFW_QUERY_URL =
+  "https://services2.arcgis.com/" +
+  "Uq9r85Potqm3MfRV/ArcGIS/rest/services/" +
+  "biosds2897_fmu/FeatureServer/0/query";
+
+// The MVP defines "recent" as the previous 60 days.
+const RECENT_DAY_COUNT = 60;
 
 // HTML element references
 // These variables hold references to elements that already exist in index.html.
@@ -34,8 +18,219 @@ const tabButtons = document.querySelectorAll(".tab-button");
 // Popup state
 // State is information that can change while the popup is running.
 
+// Hold the normalized records downloaded from CDFW.
+let stockingRecords = [];
+
+// Hold the IDs of waters the user has favorited.
 let favoriteWaterIds = [];
+
+// Remember which tab is currently selected.
 let activeTabName = "recent";
+
+// CDFW query construction
+// Convert a Date object into the YYYY-MM-DD format expected by ArcGIS.
+function formatDateForArcGis(date) {
+  const year = date.getFullYear();
+
+  // padStart() turns a value such as "9" into "09".
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+}
+
+// Build a CDFW URL that requests records from the previous 60 days forward.
+function createCdfwQueryUrl() {
+  const cutoffDate = new Date();
+
+  // Remove the current time so the comparison is based on calendar dates.
+  cutoffDate.setHours(0, 0, 0, 0);
+
+  // Move the date backward by our chosen recent-day count.
+  cutoffDate.setDate(
+    cutoffDate.getDate() - RECENT_DAY_COUNT
+  );
+
+  const cutoffDateString =
+    formatDateForArcGis(cutoffDate);
+
+  const queryUrl = new URL(CDFW_QUERY_URL);
+
+  // ArcGIS supports SQL-like conditions through its "where" parameter.
+  queryUrl.searchParams.set(
+    "where",
+    `WeekOfPlantStart >= DATE '${cutoffDateString}'`
+  );
+
+  // Ask only for fields that the extension needs.
+  queryUrl.searchParams.set(
+    "outFields",
+    [
+      "StockingWaterID",
+      "WaterName",
+      "WeekOfPlantStart",
+      "FishType",
+      "Counties",
+      "Lat",
+      "Lon",
+      "AnnouncePeriod"
+    ].join(",")
+  );
+
+  // Lat and Lon are already fields, so separate ArcGIS geometry is unnecessary.
+  queryUrl.searchParams.set("returnGeometry", "false");
+
+  // Request newest planting weeks first.
+  queryUrl.searchParams.set(
+    "orderByFields",
+    "WeekOfPlantStart DESC"
+  );
+
+  // Request JSON rather than the ArcGIS HTML query page.
+  queryUrl.searchParams.set("f", "json");
+
+  return queryUrl.toString();
+}
+
+// CDFW data fetching
+// Download and return the raw feature array from CDFW.
+async function fetchCdfwFeatures() {
+  const queryUrl = createCdfwQueryUrl();
+
+  // fetch() starts an HTTP request and returns a Promise.
+  const response = await fetch(queryUrl);
+
+  // HTTP errors such as 404 or 500 do not automatically throw an error.
+  if (!response.ok) {
+    throw new Error(
+      `CDFW request failed with status ${response.status}`
+    );
+  }
+
+  // Convert the response body from JSON text into a JavaScript object.
+  const responseData = await response.json();
+
+  // ArcGIS can report an error inside an otherwise successful HTTP response.
+  if (responseData.error) {
+    throw new Error(
+      responseData.error.message || "CDFW returned an error"
+    );
+  }
+
+  // Verify that the response contains the array we expect.
+  if (!Array.isArray(responseData.features)) {
+    throw new Error(
+      "CDFW response did not contain a features array"
+    );
+  }
+
+  return responseData.features;
+}
+
+// -----------------------------------------------------------------------------
+// CDFW data normalization
+// -----------------------------------------------------------------------------
+//
+// ArcGIS uses names such as WaterName and Lat.
+// Normalization converts them into names controlled by our application.
+
+// Convert CDFW's announcement period into one of our three status values.
+function normalizeAnnouncementStatus(announcePeriod) {
+  if (announcePeriod === "current") {
+    return "current";
+  }
+
+  if (announcePeriod === "future") {
+    return "future";
+  }
+
+  // The date query already limits past records to the previous 60 days.
+  return "recent";
+}
+
+// Convert one raw ArcGIS feature into our application's stocking format.
+function normalizeCdfwFeature(feature) {
+  const attributes = feature.attributes;
+
+  return {
+    waterId: attributes.StockingWaterID,
+    waterName: attributes.WaterName,
+    fishType: attributes.FishType,
+    counties: attributes.Counties,
+    plantingWeekStart: attributes.WeekOfPlantStart,
+
+    // Number() ensures coordinates are JavaScript numbers.
+    latitude: Number(attributes.Lat),
+    longitude: Number(attributes.Lon),
+
+    status: normalizeAnnouncementStatus(
+      attributes.AnnouncePeriod
+    )
+  };
+}
+
+// Check whether a normalized record contains every value needed by the UI.
+function isUsableStocking(stocking) {
+  const hasWaterId =
+    Number.isInteger(stocking.waterId);
+
+  const hasWaterName =
+    typeof stocking.waterName === "string" &&
+    stocking.waterName.length > 0;
+
+  const hasFishType =
+    typeof stocking.fishType === "string" &&
+    stocking.fishType.length > 0;
+
+  const hasCounties =
+    typeof stocking.counties === "string" &&
+    stocking.counties.length > 0;
+
+  const hasPlantingWeek =
+    typeof stocking.plantingWeekStart === "string" &&
+    stocking.plantingWeekStart.length > 0;
+
+  const hasCoordinates =
+    Number.isFinite(stocking.latitude) &&
+    Number.isFinite(stocking.longitude);
+
+  return (
+    hasWaterId &&
+    hasWaterName &&
+    hasFishType &&
+    hasCounties &&
+    hasPlantingWeek &&
+    hasCoordinates
+  );
+}
+
+// Normalize all raw features and remove records the UI cannot safely display.
+function normalizeCdfwFeatures(rawFeatures) {
+  // map() converts every raw feature into our preferred object format.
+  const normalizedStockings = rawFeatures.map(
+    (feature) => {
+      return normalizeCdfwFeature(feature);
+    }
+  );
+
+  // filter() creates a new array containing only usable records.
+  const usableStockings = normalizedStockings.filter(
+    (stocking) => {
+      return isUsableStocking(stocking);
+    }
+  );
+
+  const skippedRecordCount =
+    normalizedStockings.length - usableStockings.length;
+
+  if (skippedRecordCount > 0) {
+    console.warn(
+      `Skipped ${skippedRecordCount} incomplete CDFW records.`
+    );
+  }
+
+  return usableStockings;
+}
 
 // Favorite storage
 // Read the saved array of favorite water IDs from Firefox storage.
@@ -219,7 +414,7 @@ function createStockingCard(stocking) {
 // Return only the records that belong in the selected tab.
 function getStockingsForTab(tabName) {
   if (tabName === "recent") {
-    return sampleStockings.filter((stocking) => {
+    return stockingRecords.filter((stocking) => {
       return stocking.status === "recent";
     });
   }
@@ -227,13 +422,13 @@ function getStockingsForTab(tabName) {
   if (tabName === "upcoming") {
     const upcomingStatuses = ["current", "future"];
 
-    return sampleStockings.filter((stocking) => {
+    return stockingRecords.filter((stocking) => {
       return upcomingStatuses.includes(stocking.status);
     });
   }
 
   if (tabName === "favorites") {
-    return sampleStockings.filter((stocking) => {
+    return stockingRecords.filter((stocking) => {
       return isFavoriteWater(stocking.waterId);
     });
   }
@@ -244,6 +439,18 @@ function getStockingsForTab(tabName) {
 
 // List rendering
 // Clear the current list and render the supplied stocking records.
+
+// Display a single loading, error, or empty-state message.
+function renderStatusMessage(message) {
+  stockingList.replaceChildren();
+
+  const statusMessage = document.createElement("p");
+  statusMessage.classList.add("empty-message");
+  statusMessage.textContent = message;
+
+  stockingList.append(statusMessage);
+}
+
 function renderStockings(stockings) {
   stockingList.replaceChildren();
 
@@ -300,18 +507,37 @@ for (const tabButton of tabButtons) {
   });
 }
 
-// Popup initialization
-// Load saved state before rendering the popup for the first time.
+// Load favorites and live CDFW records before displaying the first tab.
 async function initializePopup() {
+  renderStatusMessage("Loading CDFW stocking data...");
+
+  // Load favorites separately so data fetching can continue if storage fails.
   try {
     favoriteWaterIds = await loadFavoriteWaterIds();
   } catch (error) {
-    // Keep the popup usable even if reading storage fails.
     console.error("Could not load favorites:", error);
     favoriteWaterIds = [];
   }
 
-  selectTab("recent");
+  // Download, normalize, and display live stocking records.
+  try {
+    const rawFeatures = await fetchCdfwFeatures();
+
+    stockingRecords =
+      normalizeCdfwFeatures(rawFeatures);
+
+    console.log(
+      `Displaying ${stockingRecords.length} CDFW records.`
+    );
+
+    selectTab("recent");
+  } catch (error) {
+    console.error("Could not load CDFW data:", error);
+
+    renderStatusMessage(
+      "Could not load stocking data. Please try again."
+    );
+  }
 }
 
 // Start the popup after all functions and event listeners have been defined.
