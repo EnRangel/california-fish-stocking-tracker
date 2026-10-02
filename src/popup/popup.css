@@ -51,6 +51,39 @@ body {
   color: #0369a1;
   font-weight: bold;
 }
+
+/* Hold the search label and input beneath the category tabs. */
+.search-container {
+  padding: 12px 12px 0;
+}
+
+/* Display a short visible label above the search field. */
+.search-label {
+  display: block;
+  margin-bottom: 6px;
+  color: #475569;
+  font-size: 13px;
+  font-weight: bold;
+}
+
+/* Make the search field fill the available popup width. */
+.search-input {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid #94a3b8;
+  border-radius: 6px;
+  color: #1f2933;
+  background-color: white;
+  font: inherit;
+}
+
+/* Provide a visible keyboard-focus indicator. */
+.search-input:focus {
+  border-color: #0284c7;
+  outline: 2px solid #bae6fd;
+  outline-offset: 1px;
+}
+
 /* overflow-y: auto will make it scroll when we add more records. */
 .stocking-list {
   max-height: 420px;
