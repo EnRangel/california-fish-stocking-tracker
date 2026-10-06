@@ -8,6 +8,8 @@ const CDFW_QUERY_URL =
 
 // The MVP defines "recent" as the previous 60 days.
 const RECENT_DAY_COUNT = 60;
+// Request a manageable number of records from CDFW at one time.
+const CDFW_PAGE_SIZE = 500;
 
 // Keep downloaded stocking records for six hours.
 // 6 hours × 60 minutes × 60 seconds × 1,000 milliseconds
@@ -48,7 +50,8 @@ function formatDateForArcGis(date) {
 }
 
 // Build a CDFW URL that requests records from the previous 60 days forward.
-function createCdfwQueryUrl() {
+// resultOffset defaults to zero when the caller does not supply a value.
+function createCdfwQueryUrl(resultOffset = 0) {
   const cutoffDate = new Date();
 
   // Remove the current time so the comparison is based on calendar dates.
@@ -92,6 +95,18 @@ function createCdfwQueryUrl() {
   queryUrl.searchParams.set(
     "orderByFields",
     "WeekOfPlantStart DESC"
+  );
+
+  // Tell ArcGIS which page of records we want.
+  queryUrl.searchParams.set(
+    "resultOffset",
+    String(resultOffset)
+  );
+
+  // Limit each response to our chosen page size.
+  queryUrl.searchParams.set(
+    "resultRecordCount",
+    String(CDFW_PAGE_SIZE)
   );
 
   // Request JSON rather than the ArcGIS HTML query page.
