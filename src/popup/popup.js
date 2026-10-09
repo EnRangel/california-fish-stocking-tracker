@@ -117,44 +117,92 @@ function createCdfwQueryUrl(resultOffset = 0) {
 
 // CDFW data fetching
 // Download and return the raw feature array from CDFW.
+// Download every page of raw CDFW features and combine them into one array.
 async function fetchCdfwFeatures() {
-  const queryUrl = createCdfwQueryUrl();
+  // const prevents reassignment, but we can still add items to the array.
+  const allFeatures = [];
 
-  // fetch() starts an HTTP request and returns a Promise.
-  const response = await fetch(queryUrl);
+  // The first page begins before any records have been skipped.
+  let resultOffset = 0;
 
-  // HTTP errors such as 404 or 500 do not automatically throw an error.
-  if (!response.ok) {
-    throw new Error(
-      `CDFW request failed with status ${response.status}`
+  // Start as true because we always need to request the first page.
+  let hasMorePages = true;
+
+  // Repeat this block until CDFW says there are no additional records.
+  while (hasMorePages) {
+    const queryUrl =
+      createCdfwQueryUrl(resultOffset);
+
+    // await pauses this function until the current request finishes.
+    const response = await fetch(queryUrl);
+
+    // fetch() does not automatically throw for HTTP errors.
+    if (!response.ok) {
+      throw new Error(
+        `CDFW request failed with status ${response.status}`
+      );
+    }
+
+    // Convert the JSON response text into a JavaScript object.
+    const responseData = await response.json();
+
+    // ArcGIS may include an error inside a successful HTTP response.
+    if (responseData.error) {
+      throw new Error(
+        responseData.error.message ||
+        "CDFW returned an error"
+      );
+    }
+
+    // Verify that this page contains the expected feature array.
+    if (!Array.isArray(responseData.features)) {
+      throw new Error(
+        "CDFW response did not contain a features array"
+      );
+    }
+
+    const pageFeatures = responseData.features;
+
+    // Add every feature from this page to the complete results array.
+    for (const feature of pageFeatures) {
+      allFeatures.push(feature);
+    }
+
+    console.log(
+      `Downloaded ${pageFeatures.length} records ` +
+      `starting at offset ${resultOffset}.`
     );
+
+    // Prevent an endless loop if the server claims another page exists
+    // but does not provide any records.
+    if (
+      responseData.exceededTransferLimit === true &&
+      pageFeatures.length === 0
+    ) {
+      throw new Error(
+        "CDFW pagination stopped making progress"
+      );
+    }
+
+    // ArcGIS sets this to true when another page is available.
+    hasMorePages =
+      responseData.exceededTransferLimit === true;
+
+    // Move the next request past every record we just received.
+    resultOffset += pageFeatures.length;
   }
 
-  // Convert the response body from JSON text into a JavaScript object.
-  const responseData = await response.json();
-
-  // ArcGIS can report an error inside an otherwise successful HTTP response.
-  if (responseData.error) {
-    throw new Error(
-      responseData.error.message || "CDFW returned an error"
-    );
-  }
-
-  // Verify that the response contains the array we expect.
-  if (!Array.isArray(responseData.features)) {
-    throw new Error(
-      "CDFW response did not contain a features array"
-    );
-  }
-
-  return responseData.features;
+  return allFeatures;
 }
 
+// -----------------------------------------------------------------------------
 // CDFW data normalization
-// ArcGIS uses names such as WaterName and Lat.
+// -----------------------------------------------------------------------------
+//
+// ArcGIS uses field names such as WaterName and Lat.
 // Normalization converts them into names controlled by our application.
 
-// Convert CDFW's announcement period into one of our three status values.
+// Convert CDFW's announcement period into one of our status values.
 function normalizeAnnouncementStatus(announcePeriod) {
   if (announcePeriod === "current") {
     return "current";
@@ -179,7 +227,7 @@ function normalizeCdfwFeature(feature) {
     counties: attributes.Counties,
     plantingWeekStart: attributes.WeekOfPlantStart,
 
-    // Number() ensures coordinates are JavaScript numbers.
+    // Number() ensures the coordinates are JavaScript numbers.
     latitude: Number(attributes.Lat),
     longitude: Number(attributes.Lon),
 
