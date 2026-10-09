@@ -26,6 +26,50 @@ body {
   font-size: 14px;
 }
 
+/* Place the cache timestamp and refresh button on the same row. */
+.data-controls {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 12px;
+  border-bottom: 1px solid #cbd5e1;
+  background-color: white;
+}
+
+/* Keep the timestamp compact so the refresh button has enough room. */
+.last-updated {
+  margin: 0;
+  color: #475569;
+  font-size: 12px;
+}
+
+/* Style the refresh action as a small secondary button. */
+.refresh-button {
+  padding: 6px 9px;
+  border: 1px solid #0284c7;
+  border-radius: 6px;
+  color: #0369a1;
+  background-color: white;
+  font: inherit;
+  font-size: 12px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* Make the button’s interactive state visible to mouse users. */
+.refresh-button:hover {
+  background-color: #f0f9ff;
+}
+
+/* Show when JavaScript temporarily disables the button. */
+.refresh-button:disabled {
+  border-color: #94a3b8;
+  color: #64748b;
+  background-color: #e2e8f0;
+  cursor: wait;
+}
+
 .tabs {
   display: flex;
   border-bottom: 1px solid #cbd5e1;
