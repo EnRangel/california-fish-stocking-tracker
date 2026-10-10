@@ -21,6 +21,8 @@ const CACHE_LIFETIME_MS = 6 * 60 * 60 * 1000;
 const stockingList = document.querySelector("#stocking-list");
 const tabButtons = document.querySelectorAll(".tab-button");
 const searchInput = document.querySelector("#stocking-search");
+// This span displays when the current stocking data was downloaded.
+const lastUpdatedValue = document.querySelector("#last-updated-value");
 
 // Popup state
 // State is information that can change while the popup is running.
@@ -36,6 +38,8 @@ let activeTabName = "recent";
 
 // Store what the user has typed so it can be used across every tab.
 let searchText = "";
+// Store the time associated with the currently displayed records.
+let lastUpdatedTime = null;
 
 // CDFW query construction
 // Convert a Date object into the YYYY-MM-DD format expected by ArcGIS.
@@ -283,6 +287,8 @@ async function saveStockingCache(records) {
   await browser.storage.local.set({
     stockingCache: cache
   });
+  // return the cache so the caller can use its timestamp
+  return cache;
 }
 
 // Load fresh cached records or download new records from CDFW.
@@ -292,6 +298,9 @@ async function loadStockingRecords() {
   // Use the cache immediately when it is still fresh.
   if (cache && isStockingCacheFresh(cache)) {
     console.log("Using fresh cached CDFW records.");
+// Remember when these cached records were originally downloaded.
+    lastUpdatedTime = cache.fetchedAt;
+
     return cache.records;
   }
 
@@ -303,7 +312,10 @@ async function loadStockingRecords() {
       normalizeCdfwFeatures(rawFeatures);
 
     // Save the successful response for later popup openings.
-    await saveStockingCache(normalizedRecords);
+    const savedCache = await saveStockingCache(normalizedRecords);
+
+    // Remember the timestamp created for the new cache.
+    lastUpdatedTime = savedCache.fetchedAt;
 
     console.log("Downloaded fresh CDFW records.");
 
@@ -315,7 +327,8 @@ async function loadStockingRecords() {
         "CDFW request failed. Using expired cached records.",
         error
       );
-
+// Keep the original timestamp because this is older cached data.
+      lastUpdatedTime = cache.fetchedAt;
       return cache.records;
     }
 
@@ -450,6 +463,29 @@ function createGoogleMapsUrl(latitude, longitude) {
   );
 
   return googleMapsUrl.toString();
+}
+
+// Convert a millisecond timestamp into a short date and time.
+function formatLastUpdatedTime(timestamp) {
+  const updatedDate = new Date(timestamp);
+
+  return updatedDate.toLocaleString("en-US", {
+    month: "short",
+    day: "numeric",
+    hour: "numeric",
+    minute: "2-digit"
+  });
+}
+
+// Update the timestamp text shown near the refresh button.
+function updateLastUpdatedDisplay() {
+  if (!Number.isFinite(lastUpdatedTime)) {
+    lastUpdatedValue.textContent = "Unavailable";
+    return;
+  }
+
+  lastUpdatedValue.textContent =
+    formatLastUpdatedTime(lastUpdatedTime);
 }
 
 // Display formatting
@@ -755,8 +791,9 @@ async function initializePopup() {
 
   // Download, normalize, and display live stocking records.
   try {
-    stockingRecords =
-      await loadStockingRecords();
+    stockingRecords = await loadStockingRecords();
+// The loading function also sets lastUpdatedTime.
+    updateLastUpdatedDisplay();
 
     console.log(
       `Displaying ${stockingRecords.length} CDFW records.`
@@ -765,7 +802,8 @@ async function initializePopup() {
     selectTab("recent");
   } catch (error) {
     console.error("Could not load CDFW data:", error);
-
+    // Replace "Loading..." when no data or timestamp could be loaded.
+    updateLastUpdatedDisplay();
     renderStatusMessage(
       "Could not load stocking data. Please try again."
     );
