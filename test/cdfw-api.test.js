@@ -30,6 +30,9 @@ test("creates a paginated CDFW query URL", () => {
     "false"
   );
 
+    // Verifies that the server is asked to return JSON.
+    // f stands for the output format:
+    // f=json
   assert.equal(
     queryUrl.searchParams.get("f"),
     "json"
