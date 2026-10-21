@@ -1,116 +1,163 @@
-# California Fish Stocking Map
+# California Fish Stocking
 
-A Firefox extension that displays recent and upcoming California fish stocking
-locations on an interactive map.
+A Firefox extension for browsing recent and upcoming fish stocking information
+published by the California Department of Fish and Wildlife (CDFW).
 
-## Problem
+The extension opens as a toolbar popup. It shows stocking information in a
+searchable list and provides a Google Maps link for each water body's published
+coordinates.
 
-California Department of Fish and Wildlife (CDFW) stocking information is
-available online, but anglers must search through a schedule and open locations
-individually. This extension will make that information easier to explore
-geographically.
+## Features
 
-## User story
+- Shows recently stocked waters from the previous 60 days.
+- Shows current and future stocking announcements when CDFW publishes them.
+- Separates records into Recent, Upcoming, and Favorites tabs.
+- Searches by water name, fish species, or county.
+- Saves favorite waters between popup sessions.
+- Opens a selected water's coordinates in Google Maps.
+- Displays different color badges for recent, current, and future records.
+- Downloads every available page of matching CDFW records.
+- Caches successful downloads for six hours.
+- Falls back to an older cache when automatic loading encounters a temporary
+  network problem.
+- Lets the user manually request fresh data.
 
-As a California angler, I want to open a map of recent and upcoming fish
-stockings so that I can quickly identify stocked waters and inspect their
-stocking information.
+## Important date information
 
-## MVP
+CDFW publishes a **planting week**, not an exact stocking day. The extension
+preserves that wording and displays dates as “Week of ...”.
 
-The first version will:
-
-- Open an extension-owned map from the Firefox toolbar.
-- Use Leaflet with OpenStreetMap tiles.
-- Retrieve stocking records from the official CDFW data source.
-- Display records from the previous 60 days.
-- Display future records made available by CDFW.
-- Place a fish marker at each water body's published coordinates.
-- Show the water name, planting week, species, county, and stocking status when
-  a marker is selected.
-- Link users to the official CDFW information.
-- Include a legend explaining marker colors.
-- Cache fetched data to avoid unnecessary network requests.
-
-## Stocking statuses
-
-CDFW publishes a planting week rather than an exact planting day. The extension
-must preserve that distinction and must not imply that an exact date is known.
-
-- **Blue fish:** stocked within the previous 60 days
-- **Green fish:** scheduled for the current planting week
-- **Orange fish:** scheduled for a future planting week
-
-Scheduled plants may change because of weather, water, road, or operational
-conditions.
+Upcoming stocking plans can change because of weather, water conditions, road
+conditions, or operational needs. The Upcoming tab only displays announcements
+that are present in the CDFW data; the extension does not predict future
+stockings.
 
 ## Data source
 
-CDFW publishes an ArcGIS feature layer containing fish planting locations and
-stocking information:
+The extension queries the public CDFW ArcGIS feature layer:
 
 <https://services2.arcgis.com/Uq9r85Potqm3MfRV/ArcGIS/rest/services/biosds2897_fmu/FeatureServer/0>
 
-Fields expected by the MVP:
+The public CDFW fish planting schedule is also available at:
 
-| Source field | Meaning |
+<https://www.nrm.dfg.ca.gov/FishPlants/PublicPlantSearch>
+
+The extension currently uses these source fields:
+
+| CDFW field | Use in the extension |
 | --- | --- |
-| `WaterName` | Name of the body of water |
-| `WeekOfPlantStart` | Beginning of the published planting week |
-| `FishType` | Stocked species or fish category |
-| `Counties` | California county or counties |
-| `Lat` | Published latitude |
-| `Lon` | Published longitude |
-| `AnnouncePeriod` | CDFW status category |
+| `StockingWaterID` | Identifies a water when saving favorites |
+| `WaterName` | Displays the body of water's name |
+| `WeekOfPlantStart` | Displays the published planting week |
+| `FishType` | Displays and searches the fish species or category |
+| `Counties` | Displays and searches the county or counties |
+| `Lat` | Supplies the latitude for the Google Maps link |
+| `Lon` | Supplies the longitude for the Google Maps link |
+| `AnnouncePeriod` | Classifies a record as recent, current, or future |
 
-The public planting schedule is available at
-<https://www.nrm.dfg.ca.gov/FishPlants/PublicPlantSearch>.
-
-## Initial architecture
+## How the data flows
 
 ```text
-CDFW ArcGIS feature layer
-          |
-          v
-Firefox extension background script
-  - fetch
-  - validate and normalize
-  - classify by date
-  - cache
-          |
-          v
-Extension map page
-  - Leaflet/OpenStreetMap
-  - fish markers
-  - detail popups and legend
+User opens the Firefox popup
+              |
+              v
+Read the saved favorites and stocking cache
+              |
+              v
+Use a fresh cache, or request paginated records from CDFW
+              |
+              v
+Normalize and validate the CDFW records
+              |
+              v
+Filter by the selected tab and search text
+              |
+              v
+Render stocking cards with Google Maps links
 ```
 
-The first version will not require a custom backend or a Google Maps API key.
+The extension does not require a custom backend, user account, or Google Maps
+API key.
 
-## Non-goals for the MVP
+## Project structure
 
-- Injecting markers directly into Google Maps or another mapping website
-- Supporting states other than California
-- Predicting unannounced stocking dates
-- Showing an exact planting point within a body of water
-- User accounts, saved locations, or notifications
-- Mobile support
+```text
+fishingExtension/
+|-- manifest.json
+|-- package.json
+|-- src/
+|   |-- background.js
+|   `-- popup/
+|       |-- index.html
+|       |-- popup.css
+|       |-- popup.js
+|       |-- cdfw-api.js
+|       |-- stocking-utils.js
+|       `-- storage.js
+`-- test/
+    |-- cdfw-api.test.js
+    |-- stocking-utils.test.js
+    `-- storage.test.js
+```
 
-## Milestones
+The main responsibilities are separated as follows:
 
-1. Query the CDFW feature layer and inspect a small sample response.
-2. Define and test the normalized stocking-record format and date rules.
-3. Create the minimal Firefox extension shell.
-4. Render a basic California map in an extension page.
-5. Add stocking markers, colors, popups, and a legend.
-6. Add caching, error handling, loading states, and tests.
-7. Package and document the extension for local Firefox installation.
+- `popup.js` coordinates state, events, and rendering.
+- `cdfw-api.js` builds ArcGIS URLs and downloads paginated data.
+- `stocking-utils.js` normalizes, validates, searches, and formats records.
+- `storage.js` reads and writes the cache and favorites through Firefox storage.
+- `background.js` is currently a placeholder and is not registered in the
+  manifest.
 
-## Possible later features
+## Run the extension locally
 
-- Overlay markers on Google Maps or other map websites
-- Filter by species, county, date, or distance
-- Find stockings near the user's location
-- Save favorite waters
-- Notify users when a favorite water appears in the schedule
-- Support Chromium-based browsers
+1. Clone or download this repository.
+2. Open Firefox and enter `about:debugging` in the address bar.
+3. Select **This Firefox**.
+4. Select **Load Temporary Add-on**.
+5. Choose this project's `manifest.json` file.
+6. Select the extension's toolbar button to open the popup.
+
+A temporary extension remains installed only for the current Firefox session.
+After restarting Firefox, load `manifest.json` again.
+
+## Run the tests
+
+The tests use Node's built-in test runner, so no testing framework is required.
+
+```powershell
+npm test
+```
+
+The current tests cover:
+
+- ArcGIS query parameters and pagination;
+- announcement-status normalization;
+- case-insensitive stocking search;
+- cache expiration rules;
+- loading a valid cache through a mocked Firefox storage API.
+
+## Extension permissions
+
+The manifest requests only the permissions needed by the current features:
+
+- `storage` saves the cache and favorite water IDs in Firefox.
+- `https://services2.arcgis.com/*` allows requests to the CDFW ArcGIS service.
+
+The extension does not require a user account and does not request the user's
+current location.
+
+## Current limitations
+
+- Stocking data and coordinates are limited to what CDFW publishes.
+- The Upcoming tab can be empty when CDFW has no current or future
+  announcements in the queried data.
+- Favorites are stored only in the current Firefox extension installation.
+- The extension is currently designed and tested for Firefox.
+
+## Planned finishing work
+
+- Add extension icons and screenshots.
+- Complete a manual Firefox test checklist.
+- Add more validation and error-path unit tests.
+- Package the extension for a portfolio release or Firefox Add-ons submission.

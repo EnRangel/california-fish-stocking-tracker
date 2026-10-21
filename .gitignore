@@ -1,1 +1,4 @@
 node_modules/
+
+# Keep the entire personal documentation folder local.
+/docs/
