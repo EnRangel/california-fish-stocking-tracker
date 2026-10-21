@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 
 import {
   doesStockingMatchSearch,
-  normalizeAnnouncementStatus
+  normalizeAnnouncementStatus,
+  normalizeCdfwFeature
 } from "../src/popup/stocking-utils.js";
 
 // Verify that CDFW announcement values become our application statuses.
@@ -74,5 +75,44 @@ test("an empty search matches every stocking", () => {
   assert.equal(
     doesStockingMatchSearch(stocking, "   "),
     true
+  );
+});
+
+// Verify that a raw ArcGIS feature becomes the format used by our application.
+test("normalizes a raw CDFW feature", () => {
+  // Arrange: create an object shaped like a record returned by ArcGIS.
+  const rawFeature = {
+    attributes: {
+      StockingWaterID: 123,
+      WaterName: "June Lake",
+      FishType: "Rainbow Trout",
+      Counties: "Mono",
+      WeekOfPlantStart: "2026-10-19",
+      Lat: "37.779",
+      Lon: "-119.075",
+      AnnouncePeriod: "future"
+    }
+  };
+
+  // Act: convert the external CDFW format into our application format.
+  const actualStocking =
+    normalizeCdfwFeature(rawFeature);
+
+  // Arrange the exact object that we expect our function to create.
+  const expectedStocking = {
+    waterId: 123,
+    waterName: "June Lake",
+    fishType: "Rainbow Trout",
+    counties: "Mono",
+    plantingWeekStart: "2026-10-19",
+    latitude: 37.779,
+    longitude: -119.075,
+    status: "future"
+  };
+
+  // Assert: compare every property in both objects.
+  assert.deepEqual(
+    actualStocking,
+    expectedStocking
   );
 });
