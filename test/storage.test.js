@@ -136,3 +136,169 @@ test("loads a valid stocking cache", async () => {
     globalThis.browser = originalBrowser;
   }
 });
+
+// Verify that a new user with no saved cache receives null.
+test("returns null when no stocking cache exists", async () => {
+  // Save the original browser value before installing a fake.
+  const originalBrowser = globalThis.browser;
+
+  // Firefox returns an empty object when the requested key does not exist.
+  const fakeGet = async (requestedKey) => {
+    const expectedStorageKey = "stockingCache";
+
+    assert.equal(
+      requestedKey,
+      expectedStorageKey
+    );
+
+    const fakeStoredData = {};
+
+    return fakeStoredData;
+  };
+
+  // Recreate the browser.storage.local.get() property path.
+  const fakeLocalStorage = {
+    get: fakeGet
+  };
+
+  const fakeStorage = {
+    local: fakeLocalStorage
+  };
+
+  const fakeBrowser = {
+    storage: fakeStorage
+  };
+
+  globalThis.browser = fakeBrowser;
+
+  try {
+    // Act: load from storage that has no stockingCache property.
+    const actualCache =
+      await loadStockingCache();
+
+    const expectedCache = null;
+
+    // Assert: a missing cache is a normal empty state, not an error.
+    assert.equal(
+      actualCache,
+      expectedCache
+    );
+  } finally {
+    // Restore the original browser value for later tests.
+    globalThis.browser = originalBrowser;
+  }
+});
+
+// Verify that a cache is rejected when records is not an array.
+test("returns null when cached records are malformed", async () => {
+  // Arrange a cache whose records value has the wrong type.
+  const malformedCache = {
+    records: "not an array",
+    fetchedAt: 123456789
+  };
+
+  const originalBrowser = globalThis.browser;
+
+  const fakeGet = async (requestedKey) => {
+    const expectedStorageKey = "stockingCache";
+
+    assert.equal(
+      requestedKey,
+      expectedStorageKey
+    );
+
+    const fakeStoredData = {
+      stockingCache: malformedCache
+    };
+
+    return fakeStoredData;
+  };
+
+  // Build the same nested API shape provided by Firefox.
+  const fakeLocalStorage = {
+    get: fakeGet
+  };
+
+  const fakeStorage = {
+    local: fakeLocalStorage
+  };
+
+  const fakeBrowser = {
+    storage: fakeStorage
+  };
+
+  globalThis.browser = fakeBrowser;
+
+  try {
+    // Act: ask the real function to validate the malformed cache.
+    const actualCache =
+      await loadStockingCache();
+
+    const expectedCache = null;
+
+    // Assert: invalid stored data must not reach the popup.
+    assert.equal(
+      actualCache,
+      expectedCache
+    );
+  } finally {
+    globalThis.browser = originalBrowser;
+  }
+});
+
+// Verify that a cache is rejected when its timestamp is not a number.
+test("returns null when the cache timestamp is malformed", async () => {
+  // Arrange a cache with valid records but an invalid fetchedAt value.
+  const malformedCache = {
+    records: [],
+    fetchedAt: "yesterday"
+  };
+
+  const originalBrowser = globalThis.browser;
+
+  const fakeGet = async (requestedKey) => {
+    const expectedStorageKey = "stockingCache";
+
+    assert.equal(
+      requestedKey,
+      expectedStorageKey
+    );
+
+    const fakeStoredData = {
+      stockingCache: malformedCache
+    };
+
+    return fakeStoredData;
+  };
+
+  // Build browser.storage.local.get() one level at a time.
+  const fakeLocalStorage = {
+    get: fakeGet
+  };
+
+  const fakeStorage = {
+    local: fakeLocalStorage
+  };
+
+  const fakeBrowser = {
+    storage: fakeStorage
+  };
+
+  globalThis.browser = fakeBrowser;
+
+  try {
+    // Act: load and validate the cache through production code.
+    const actualCache =
+      await loadStockingCache();
+
+    const expectedCache = null;
+
+    // Assert: a nonnumeric timestamp makes the whole cache invalid.
+    assert.equal(
+      actualCache,
+      expectedCache
+    );
+  } finally {
+    globalThis.browser = originalBrowser;
+  }
+});
