@@ -97,15 +97,29 @@ async function loadStockingRecords(forceRefresh = false) {
   }
 
   try {
-    // ArcGIS supplies recent history and the coordinate lookup data.
-    const rawFeatures = await fetchCdfwFeatures();
+    // Calling an async function starts its work and immediately returns a
+    // Promise. A Promise represents a result that will be available later.
+    const recentFeaturesPromise = fetchCdfwFeatures();
+
+    // This download does not depend on the recent-feature download, so start
+    // it now instead of waiting for the first request to finish.
+    const scheduleRecordsPromise = fetchCdfwScheduleRecords();
+
+    // Promise.all() waits for both downloads. The returned array keeps the
+    // same order as the Promise array passed into Promise.all().
+    const downloadResults = await Promise.all([
+      recentFeaturesPromise,
+      scheduleRecordsPromise
+    ]);
+
+    // Index 0 belongs to recentFeaturesPromise because it was listed first.
+    const rawFeatures = downloadResults[0];
+
+    // Index 1 belongs to scheduleRecordsPromise because it was listed second.
+    const liveScheduleRecords = downloadResults[1];
 
     const recentRecords =
       normalizeCdfwFeatures(rawFeatures);
-
-    // The public schedule contains newer current and future announcements.
-    const liveScheduleRecords =
-      await fetchCdfwScheduleRecords();
 
     // Collect the water IDs whose coordinates must be found in ArcGIS.
     const scheduledWaterIds = [];
