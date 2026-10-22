@@ -6,8 +6,13 @@
 // Each relative path begins with "./" because the files share this folder.
 
 import {
-  fetchCdfwFeatures
+  fetchCdfwFeatures,
+  fetchCdfwWaterLocations
 } from "./cdfw-api.js";
+
+import {
+  fetchCdfwScheduleRecords
+} from "./cdfw-schedule.js";
 
 import {
   isStockingCacheFresh,
@@ -18,13 +23,15 @@ import {
 } from "./storage.js";
 
 import {
+  combineCdfwStockingRecords,
   createGoogleMapsUrl,
   doesStockingMatchSearch,
   formatCounties,
   formatLastUpdatedTime,
   formatPlantingWeek,
   getStatusLabel,
-  normalizeCdfwFeatures
+  normalizeCdfwFeatures,
+  normalizeCdfwScheduleRecords
 } from "./stocking-utils.js";
 
 // -----------------------------------------------------------------------------
@@ -90,11 +97,38 @@ async function loadStockingRecords(forceRefresh = false) {
   }
 
   try {
-    // Download and normalize a fresh copy from CDFW.
+    // ArcGIS supplies recent history and the coordinate lookup data.
     const rawFeatures = await fetchCdfwFeatures();
 
-    const normalizedRecords =
+    const recentRecords =
       normalizeCdfwFeatures(rawFeatures);
+
+    // The public schedule contains newer current and future announcements.
+    const liveScheduleRecords =
+      await fetchCdfwScheduleRecords();
+
+    // Collect the water IDs whose coordinates must be found in ArcGIS.
+    const scheduledWaterIds = [];
+
+    for (const scheduleRecord of liveScheduleRecords) {
+      scheduledWaterIds.push(scheduleRecord.waterId);
+    }
+
+    const locationFeatures =
+      await fetchCdfwWaterLocations(scheduledWaterIds);
+
+    const upcomingRecords =
+      normalizeCdfwScheduleRecords(
+        liveScheduleRecords,
+        locationFeatures
+      );
+
+    // Prefer the live schedule if both sources describe the same event.
+    const normalizedRecords =
+      combineCdfwStockingRecords(
+        recentRecords,
+        upcomingRecords
+      );
 
     // Save the successful response for later popup openings.
     const savedCache =
@@ -103,7 +137,10 @@ async function loadStockingRecords(forceRefresh = false) {
     // Remember the timestamp created for the new cache.
     lastUpdatedTime = savedCache.fetchedAt;
 
-    console.log("Downloaded fresh CDFW records.");
+    console.log(
+      `Combined ${recentRecords.length} recent records ` +
+      `with ${upcomingRecords.length} live schedule records.`
+    );
 
     return normalizedRecords;
   } catch (error) {

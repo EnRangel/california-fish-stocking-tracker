@@ -7,11 +7,16 @@
 
 // Convert CDFW's announcement period into one of our status values.
 export function normalizeAnnouncementStatus(announcePeriod) {
-  if (announcePeriod === "current") {
+  const normalizedAnnouncementPeriod =
+    typeof announcePeriod === "string"
+      ? announcePeriod.trim().toLowerCase()
+      : "";
+
+  if (normalizedAnnouncementPeriod === "current") {
     return "current";
   }
 
-  if (announcePeriod === "future") {
+  if (normalizedAnnouncementPeriod === "future") {
     return "future";
   }
 
@@ -101,6 +106,126 @@ export function normalizeCdfwFeatures(rawFeatures) {
   }
 
   return usableStockings;
+}
+
+// Add ArcGIS coordinates to records parsed from the live CDFW schedule.
+export function normalizeCdfwScheduleRecords(
+  scheduleRecords,
+  locationFeatures
+) {
+  // Map stores one coordinate object under each water ID.
+  const locationsByWaterId = new Map();
+
+  for (const locationFeature of locationFeatures) {
+    const attributes = locationFeature.attributes;
+    const waterId = Number(attributes.StockingWaterID);
+    const latitude = Number(attributes.Lat);
+    const longitude = Number(attributes.Lon);
+
+    const hasValidLocation =
+      Number.isInteger(waterId) &&
+      Number.isFinite(latitude) &&
+      Number.isFinite(longitude);
+
+    if (
+      hasValidLocation &&
+      !locationsByWaterId.has(waterId)
+    ) {
+      locationsByWaterId.set(waterId, {
+        latitude: latitude,
+        longitude: longitude
+      });
+    }
+  }
+
+  const normalizedScheduleRecords = [];
+  let skippedRecordCount = 0;
+
+  for (const scheduleRecord of scheduleRecords) {
+    const location =
+      locationsByWaterId.get(scheduleRecord.waterId);
+
+    // Begin with missing coordinates. If a matching location exists, replace
+    // them with the ArcGIS numbers before validation.
+    let latitude;
+    let longitude;
+
+    if (location) {
+      latitude = location.latitude;
+      longitude = location.longitude;
+    }
+
+    const normalizedStocking = {
+      waterId: scheduleRecord.waterId,
+      waterName: scheduleRecord.waterName,
+      fishType: scheduleRecord.fishType,
+      counties: scheduleRecord.counties,
+      plantingWeekStart:
+        scheduleRecord.plantingWeekStart,
+      latitude: latitude,
+      longitude: longitude,
+      status: scheduleRecord.status
+    };
+
+    if (isUsableStocking(normalizedStocking)) {
+      normalizedScheduleRecords.push(
+        normalizedStocking
+      );
+    } else {
+      skippedRecordCount += 1;
+    }
+  }
+
+  if (skippedRecordCount > 0) {
+    console.warn(
+      `Skipped ${skippedRecordCount} live schedule records ` +
+      "without usable ArcGIS coordinates."
+    );
+  }
+
+  return normalizedScheduleRecords;
+}
+
+// Create a key that identifies one water, week, and fish combination.
+function createStockingRecordKey(stocking) {
+  return (
+    `${stocking.waterId}|` +
+    `${stocking.plantingWeekStart}|` +
+    stocking.fishType.toLowerCase()
+  );
+}
+
+// Combine both official sources without displaying duplicate stocking events.
+export function combineCdfwStockingRecords(
+  recentRecords,
+  liveScheduleRecords
+) {
+  const combinedRecords = [];
+  const includedRecordKeys = new Set();
+
+  // Add the live schedule first because it has the newest status information.
+  for (const scheduleRecord of liveScheduleRecords) {
+    const recordKey =
+      createStockingRecordKey(scheduleRecord);
+
+    if (!includedRecordKeys.has(recordKey)) {
+      combinedRecords.push(scheduleRecord);
+      includedRecordKeys.add(recordKey);
+    }
+  }
+
+  // Add recent ArcGIS records that were not already supplied by the schedule.
+  for (const recentRecord of recentRecords) {
+    const recordKey =
+      createStockingRecordKey(recentRecord);
+
+    if (!includedRecordKeys.has(recordKey)) {
+      combinedRecords.push(recentRecord);
+      includedRecordKeys.add(recordKey);
+    }
+  }
+
+  return combinedRecords;
 }
 
 // Create a Google Maps search URL using a stocking's coordinates.

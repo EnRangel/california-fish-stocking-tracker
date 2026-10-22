@@ -5,10 +5,12 @@ import test from "node:test";
 import assert from "node:assert/strict";
 
 import {
+  combineCdfwStockingRecords,
   doesStockingMatchSearch,
   isUsableStocking,
   normalizeAnnouncementStatus,
-  normalizeCdfwFeature
+  normalizeCdfwFeature,
+  normalizeCdfwScheduleRecords
 } from "../src/popup/stocking-utils.js";
 
 // Verify that CDFW announcement values become our application statuses.
@@ -169,5 +171,105 @@ test("rejects a stocking with an invalid coordinate", () => {
   assert.equal(
     actualResult,
     expectedResult
+  );
+});
+
+// Verify that live schedule rows receive coordinates from ArcGIS water data.
+test("adds ArcGIS coordinates to a live schedule record", () => {
+  const scheduleRecords = [
+    {
+      waterId: 27445,
+      waterName: "Doane Pond",
+      fishType: "Trout",
+      counties: "San Diego",
+      plantingWeekStart: "2026-10-25",
+      status: "future"
+    }
+  ];
+
+  const locationFeatures = [
+    {
+      attributes: {
+        StockingWaterID: 27445,
+        WaterName: "Doane Pond",
+        Lat: "33.340149",
+        Lon: "-116.901329"
+      }
+    }
+  ];
+
+  const actualRecords =
+    normalizeCdfwScheduleRecords(
+      scheduleRecords,
+      locationFeatures
+    );
+
+  const expectedRecords = [
+    {
+      waterId: 27445,
+      waterName: "Doane Pond",
+      fishType: "Trout",
+      counties: "San Diego",
+      plantingWeekStart: "2026-10-25",
+      latitude: 33.340149,
+      longitude: -116.901329,
+      status: "future"
+    }
+  ];
+
+  assert.deepEqual(
+    actualRecords,
+    expectedRecords
+  );
+});
+
+// Verify that the live schedule wins when both sources describe one event.
+test("combines CDFW sources without duplicate events", () => {
+  const duplicateRecentRecord = {
+    waterId: 27445,
+    waterName: "Doane Pond",
+    fishType: "Trout",
+    counties: "San Diego",
+    plantingWeekStart: "2026-10-25",
+    latitude: 33.340149,
+    longitude: -116.901329,
+    status: "recent"
+  };
+
+  const differentRecentRecord = {
+    waterId: 27445,
+    waterName: "Doane Pond",
+    fishType: "Trout",
+    counties: "San Diego",
+    plantingWeekStart: "2026-10-04",
+    latitude: 33.340149,
+    longitude: -116.901329,
+    status: "recent"
+  };
+
+  const liveScheduleRecord = {
+    waterId: 27445,
+    waterName: "Doane Pond",
+    fishType: "Trout",
+    counties: "San Diego",
+    plantingWeekStart: "2026-10-25",
+    latitude: 33.340149,
+    longitude: -116.901329,
+    status: "future"
+  };
+
+  const actualRecords = combineCdfwStockingRecords(
+    [duplicateRecentRecord, differentRecentRecord],
+    [liveScheduleRecord]
+  );
+
+  const expectedRecords = [
+    liveScheduleRecord,
+    differentRecentRecord
+  ];
+
+  assert.deepEqual(
+    actualRecords,
+    expectedRecords
   );
 });
