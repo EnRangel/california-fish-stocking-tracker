@@ -139,3 +139,68 @@ test("downloads and combines multiple CDFW pages", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+// Verify that an unsuccessful HTTP status becomes an application error.
+test("throws when CDFW returns an HTTP error", async () => {
+  // Save the real fetch function so it can be restored after the test.
+  const originalFetch = globalThis.fetch;
+
+  // Replace fetch with a response that represents an unavailable server.
+  globalThis.fetch = async () => {
+    return {
+      ok: false,
+      status: 503
+    };
+  };
+
+  try {
+    // assert.rejects() passes only when the Promise rejects as expected.
+    await assert.rejects(
+      async () => {
+        await fetchCdfwFeatures();
+      },
+      {
+        message: "CDFW request failed with status 503"
+      }
+    );
+  } finally {
+    // Always restore fetch so this fake does not affect another test.
+    globalThis.fetch = originalFetch;
+  }
+});
+
+// Verify that an ArcGIS error inside a successful HTTP response is detected.
+test("throws when ArcGIS returns an API error", async () => {
+  // Save the real fetch function before installing this test's fake.
+  const originalFetch = globalThis.fetch;
+
+  // ArcGIS can return HTTP success while placing error details in the JSON.
+  globalThis.fetch = async () => {
+    return {
+      ok: true,
+      status: 200,
+      json: async () => {
+        return {
+          error: {
+            message: "ArcGIS service unavailable"
+          }
+        };
+      }
+    };
+  };
+
+  try {
+    // Confirm that the API's message is passed through to our thrown Error.
+    await assert.rejects(
+      async () => {
+        await fetchCdfwFeatures();
+      },
+      {
+        message: "ArcGIS service unavailable"
+      }
+    );
+  } finally {
+    // Restore the original global function even when the assertion fails.
+    globalThis.fetch = originalFetch;
+  }
+});
