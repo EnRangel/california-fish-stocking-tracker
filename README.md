@@ -16,7 +16,9 @@ coordinates.
 - Saves favorite waters between popup sessions.
 - Opens a selected water's coordinates in Google Maps.
 - Displays different color badges for recent, current, and future records.
-- Downloads every available page of matching CDFW records.
+- Combines recent ArcGIS records with CDFW's live current/future schedule.
+- Looks up coordinates for live schedule rows by their CDFW water IDs.
+- Downloads every available page of matching ArcGIS records.
 - Caches successful downloads for six hours.
 - Falls back to an older cache when automatic loading encounters a temporary
   network problem.
@@ -32,17 +34,24 @@ conditions, or operational needs. The Upcoming tab only displays announcements
 that are present in the CDFW data; the extension does not predict future
 stockings.
 
-## Data source
+## Data sources
 
-The extension queries the public CDFW ArcGIS feature layer:
+The extension combines two official CDFW sources because they serve different
+purposes.
+
+The public ArcGIS feature layer supplies recent stocking history and water
+coordinates:
 
 <https://services2.arcgis.com/Uq9r85Potqm3MfRV/ArcGIS/rest/services/biosds2897_fmu/FeatureServer/0>
 
-The public CDFW fish planting schedule is also available at:
+The live fish planting schedule supplies the current week and future week:
 
 <https://www.nrm.dfg.ca.gov/FishPlants/PublicPlantSearch>
 
-The extension currently uses these source fields:
+The two sources are joined through the numeric `StockingWaterID` embedded in
+the schedule's water-body links.
+
+The ArcGIS source provides these fields:
 
 | CDFW field | Use in the extension |
 | --- | --- |
@@ -53,7 +62,11 @@ The extension currently uses these source fields:
 | `Counties` | Displays and searches the county or counties |
 | `Lat` | Supplies the latitude for the Google Maps link |
 | `Lon` | Supplies the longitude for the Google Maps link |
-| `AnnouncePeriod` | Classifies a record as recent, current, or future |
+| `AnnouncePeriod` | Describes historical ArcGIS announcement periods |
+
+The live schedule provides the planting-week range, water ID, water name,
+county, and fish species. The extension compares the planting week's start date
+with the current date to label the row as current or future.
 
 ## How the data flows
 
@@ -64,10 +77,16 @@ User opens the Firefox popup
 Read the saved favorites and stocking cache
               |
               v
-Use a fresh cache, or request paginated records from CDFW
+Use a fresh version-2 cache, or request both CDFW sources
               |
               v
-Normalize and validate the CDFW records
+Parse the live schedule and normalize recent ArcGIS records
+              |
+              v
+Look up live-schedule coordinates by StockingWaterID
+              |
+              v
+Combine, validate, and remove duplicate events
               |
               v
 Filter by the selected tab and search text
@@ -92,10 +111,12 @@ fishingExtension/
 |       |-- popup.css
 |       |-- popup.js
 |       |-- cdfw-api.js
+|       |-- cdfw-schedule.js
 |       |-- stocking-utils.js
 |       `-- storage.js
 `-- test/
     |-- cdfw-api.test.js
+    |-- cdfw-schedule.test.js
     |-- stocking-utils.test.js
     `-- storage.test.js
 ```
@@ -103,8 +124,10 @@ fishingExtension/
 The main responsibilities are separated as follows:
 
 - `popup.js` coordinates state, events, and rendering.
-- `cdfw-api.js` builds ArcGIS URLs and downloads paginated data.
-- `stocking-utils.js` normalizes, validates, searches, and formats records.
+- `cdfw-api.js` downloads recent ArcGIS records and water coordinates.
+- `cdfw-schedule.js` downloads and parses the live current/future schedule.
+- `stocking-utils.js` normalizes, joins, validates, searches, and formats
+  records.
 - `storage.js` reads and writes the cache and favorites through Firefox storage.
 - `background.js` is currently a placeholder and is not registered in the
   manifest.
@@ -132,6 +155,8 @@ npm test
 The current tests cover:
 
 - ArcGIS query parameters and pagination;
+- live schedule URL creation, HTML parsing, and error handling;
+- coordinate joining and duplicate-event removal;
 - announcement-status normalization;
 - case-insensitive stocking search;
 - cache expiration rules;
@@ -143,6 +168,7 @@ The manifest requests only the permissions needed by the current features:
 
 - `storage` saves the cache and favorite water IDs in Firefox.
 - `https://services2.arcgis.com/*` allows requests to the CDFW ArcGIS service.
+- `https://www.nrm.dfg.ca.gov/*` allows requests to the live CDFW schedule.
 
 The extension does not require a user account and does not request the user's
 current location.
@@ -150,14 +176,15 @@ current location.
 ## Current limitations
 
 - Stocking data and coordinates are limited to what CDFW publishes.
-- The Upcoming tab can be empty when CDFW has no current or future
-  announcements in the queried data.
+- The Upcoming tab can be empty when CDFW publishes no current or future rows.
+- The live schedule is an HTML page rather than a documented JSON API. Tests
+  detect important table-structure changes, but a major CDFW redesign could
+  require a parser update.
 - Favorites are stored only in the current Firefox extension installation.
 - The extension is currently designed and tested for Firefox.
 
 ## Planned finishing work
 
 - Add extension icons and screenshots.
-- Complete a manual Firefox test checklist.
-- Add more validation and error-path unit tests.
+- Complete the updated manual Firefox test checklist.
 - Package the extension for a portfolio release or Firefox Add-ons submission.

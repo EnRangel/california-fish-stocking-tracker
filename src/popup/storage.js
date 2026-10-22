@@ -6,6 +6,9 @@
 // 6 hours × 60 minutes × 60 seconds × 1,000 milliseconds
 const CACHE_LIFETIME_MS = 6 * 60 * 60 * 1000;
 
+// Version 2 identifies caches that include the live current/future schedule.
+const CURRENT_CACHE_VERSION = 2;
+
 // Read and validate the saved stocking-data cache.
 export async function loadStockingCache() {
   const storedData =
@@ -15,6 +18,11 @@ export async function loadStockingCache() {
 
   // Return null when no cache exists.
   if (!cache) {
+    return null;
+  }
+
+  // Reject older cache shapes created before live schedule integration.
+  if (cache.version !== CURRENT_CACHE_VERSION) {
     return null;
   }
 
@@ -42,6 +50,7 @@ export function isStockingCacheFresh(cache) {
 // Save normalized records and the current time into Firefox storage.
 export async function saveStockingCache(records) {
   const cache = {
+    version: CURRENT_CACHE_VERSION,
     records: records,
     fetchedAt: Date.now()
   };

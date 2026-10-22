@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 
 import {
   createCdfwQueryUrl,
+  createWaterLocationsQueryUrl,
   fetchCdfwFeatures
 } from "../src/popup/cdfw-api.js";
 
@@ -45,6 +46,36 @@ test("creates a paginated CDFW query URL", () => {
   assert.equal(
     requestedFields.includes("WaterName"),
     true
+  );
+});
+
+// Verify that live schedule IDs become a distinct ArcGIS location query.
+test("creates a water-location query URL", () => {
+  // Include one repeated ID to verify that duplicates are removed.
+  const waterIds = [27445, 27445, 12343];
+
+  const queryUrl = new URL(
+    createWaterLocationsQueryUrl(waterIds, 500)
+  );
+
+  assert.equal(
+    queryUrl.searchParams.get("where"),
+    "StockingWaterID IN (27445,12343)"
+  );
+
+  assert.equal(
+    queryUrl.searchParams.get("outFields"),
+    "StockingWaterID,WaterName,Lat,Lon"
+  );
+
+  assert.equal(
+    queryUrl.searchParams.get("returnDistinctValues"),
+    "true"
+  );
+
+  assert.equal(
+    queryUrl.searchParams.get("resultOffset"),
+    "500"
   );
 });
 

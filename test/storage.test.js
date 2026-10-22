@@ -6,7 +6,8 @@ import assert from "node:assert/strict";
 
 import {
   isStockingCacheFresh,
-  loadStockingCache
+  loadStockingCache,
+  saveStockingCache
 } from "../src/popup/storage.js";
 
 // Verify that data downloaded recently is still considered fresh.
@@ -77,6 +78,7 @@ test("loads a valid stocking cache", async () => {
   ];
 
   const savedCache = {
+    version: 2,
     records: savedRecords,
     fetchedAt: 123456789
   };
@@ -189,10 +191,65 @@ test("returns null when no stocking cache exists", async () => {
   }
 });
 
+// Verify that a cache from before live-schedule support is not reused.
+test("returns null for an older cache version", async () => {
+  const oldCache = {
+    version: 1,
+    records: [],
+    fetchedAt: 123456789
+  };
+
+  const originalBrowser = globalThis.browser;
+
+  const fakeGet = async (requestedKey) => {
+    const expectedStorageKey = "stockingCache";
+
+    assert.equal(
+      requestedKey,
+      expectedStorageKey
+    );
+
+    const fakeStoredData = {
+      stockingCache: oldCache
+    };
+
+    return fakeStoredData;
+  };
+
+  const fakeLocalStorage = {
+    get: fakeGet
+  };
+
+  const fakeStorage = {
+    local: fakeLocalStorage
+  };
+
+  const fakeBrowser = {
+    storage: fakeStorage
+  };
+
+  globalThis.browser = fakeBrowser;
+
+  try {
+    const actualCache =
+      await loadStockingCache();
+
+    const expectedCache = null;
+
+    assert.equal(
+      actualCache,
+      expectedCache
+    );
+  } finally {
+    globalThis.browser = originalBrowser;
+  }
+});
+
 // Verify that a cache is rejected when records is not an array.
 test("returns null when cached records are malformed", async () => {
   // Arrange a cache whose records value has the wrong type.
   const malformedCache = {
+    version: 2,
     records: "not an array",
     fetchedAt: 123456789
   };
@@ -250,6 +307,7 @@ test("returns null when cached records are malformed", async () => {
 test("returns null when the cache timestamp is malformed", async () => {
   // Arrange a cache with valid records but an invalid fetchedAt value.
   const malformedCache = {
+    version: 2,
     records: [],
     fetchedAt: "yesterday"
   };
@@ -297,6 +355,69 @@ test("returns null when the cache timestamp is malformed", async () => {
     assert.equal(
       actualCache,
       expectedCache
+    );
+  } finally {
+    globalThis.browser = originalBrowser;
+  }
+});
+
+// Verify that newly saved caches use the current combined-data version.
+test("saves a version 2 stocking cache", async () => {
+  const recordsToSave = [
+    {
+      waterId: 27445,
+      waterName: "Doane Pond"
+    }
+  ];
+
+  const originalBrowser = globalThis.browser;
+  let dataPassedToFirefox;
+
+  // Capture the object that production code asks Firefox to store.
+  const fakeSet = async (dataToStore) => {
+    dataPassedToFirefox = dataToStore;
+  };
+
+  const fakeLocalStorage = {
+    set: fakeSet
+  };
+
+  const fakeStorage = {
+    local: fakeLocalStorage
+  };
+
+  const fakeBrowser = {
+    storage: fakeStorage
+  };
+
+  globalThis.browser = fakeBrowser;
+
+  try {
+    const returnedCache =
+      await saveStockingCache(recordsToSave);
+
+    // Version 2 means the cache supports combined live schedule data.
+    assert.equal(
+      returnedCache.version,
+      2
+    );
+
+    assert.deepEqual(
+      returnedCache.records,
+      recordsToSave
+    );
+
+    assert.equal(
+      Number.isFinite(returnedCache.fetchedAt),
+      true
+    );
+
+    // Firefox should receive the same cache object under stockingCache.
+    assert.deepEqual(
+      dataPassedToFirefox,
+      {
+        stockingCache: returnedCache
+      }
     );
   } finally {
     globalThis.browser = originalBrowser;
