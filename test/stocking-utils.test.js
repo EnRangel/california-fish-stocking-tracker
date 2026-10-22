@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 
 import {
   doesStockingMatchSearch,
+  isUsableStocking,
   normalizeAnnouncementStatus,
   normalizeCdfwFeature
 } from "../src/popup/stocking-utils.js";
@@ -114,5 +115,59 @@ test("normalizes a raw CDFW feature", () => {
   assert.deepEqual(
     actualStocking,
     expectedStocking
+  );
+});
+
+// Verify that a complete normalized stocking can be displayed safely.
+test("accepts a complete stocking record", () => {
+  // Arrange: include every field required by isUsableStocking().
+  const completeStocking = {
+    waterId: 123,
+    waterName: "June Lake",
+    fishType: "Rainbow Trout",
+    counties: "Mono",
+    plantingWeekStart: "2026-10-19",
+    latitude: 37.779,
+    longitude: -119.075,
+    status: "future"
+  };
+
+  // Act: ask the validation function whether the record is usable.
+  const actualResult =
+    isUsableStocking(completeStocking);
+
+  const expectedResult = true;
+
+  // Assert: a complete record should pass validation.
+  assert.equal(
+    actualResult,
+    expectedResult
+  );
+});
+
+// Verify that an invalid coordinate prevents a record from being displayed.
+test("rejects a stocking with an invalid coordinate", () => {
+  // Arrange: Number.NaN represents a value that could not become a number.
+  const stockingWithInvalidCoordinate = {
+    waterId: 123,
+    waterName: "June Lake",
+    fishType: "Rainbow Trout",
+    counties: "Mono",
+    plantingWeekStart: "2026-10-19",
+    latitude: Number.NaN,
+    longitude: -119.075,
+    status: "future"
+  };
+
+  // Act: validate the incomplete record.
+  const actualResult =
+    isUsableStocking(stockingWithInvalidCoordinate);
+
+  const expectedResult = false;
+
+  // Assert: a bad coordinate should cause validation to fail.
+  assert.equal(
+    actualResult,
+    expectedResult
   );
 });
