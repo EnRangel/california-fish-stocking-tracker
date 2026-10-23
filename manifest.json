@@ -3,6 +3,16 @@
   "name": "California Fish Stocking",
   "version": "0.1.0",
   "description": "Shows recent and upcoming California fish stockings.",
+  "browser_specific_settings": {
+    "gecko": {
+      "id": "california-fish-stocking@enrangel",
+      "data_collection_permissions": {
+        "required": [
+          "none"
+        ]
+      }
+    }
+  },
   "permissions": [
     "storage"
   ],
