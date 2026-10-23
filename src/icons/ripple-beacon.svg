@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+  <title>California Fish Stocking</title>
+  <desc>A water-location beacon pole standing at the center of blue ripples.</desc>
+
+  <!-- The pale circle represents a lake and contrasts with Firefox themes. -->
+  <circle cx="64" cy="64" r="56" fill="#e0f2fe"/>
+  <circle cx="64" cy="64" r="52" fill="none" stroke="#164e63"
+          stroke-width="7"/>
+
+  <!-- Draw the ripples first so the beacon appears to stand above the water. -->
+  <ellipse cx="64" cy="78" rx="39" ry="17" fill="none"
+           stroke="#0284c7" stroke-width="7"/>
+  <ellipse cx="64" cy="78" rx="23" ry="9" fill="none"
+           stroke="#164e63" stroke-width="7"/>
+
+  <!-- The thick stem remains visible when Firefox displays a small icon. -->
+  <path d="M64 39 V78" fill="none" stroke="#164e63"
+        stroke-width="8" stroke-linecap="round"/>
+
+  <!-- The circular top marks the exact water location. -->
+  <circle cx="64" cy="36" r="12" fill="#164e63"/>
+  <circle cx="60" cy="32" r="4" fill="#ffffff" opacity="0.85"/>
+</svg>
