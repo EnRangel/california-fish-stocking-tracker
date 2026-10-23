@@ -105,7 +105,6 @@ fishingExtension/
 |-- manifest.json
 |-- package.json
 |-- src/
-|   |-- background.js
 |   `-- popup/
 |       |-- index.html
 |       |-- popup.css
@@ -129,8 +128,6 @@ The main responsibilities are separated as follows:
 - `stocking-utils.js` normalizes, joins, validates, searches, and formats
   records.
 - `storage.js` reads and writes the cache and favorites through Firefox storage.
-- `background.js` is currently a placeholder and is not registered in the
-  manifest.
 
 ## Run the extension locally
 
@@ -173,6 +170,20 @@ The manifest requests only the permissions needed by the current features:
 The extension does not require a user account and does not request the user's
 current location.
 
+## Firefox release metadata
+
+The extension currently uses version `0.1.0`. The same version appears in both
+`manifest.json` and `package.json` so development metadata agrees with the
+version Firefox displays.
+
+The manifest defines `california-fish-stocking@enrangel` as the permanent
+Firefox extension ID. This is an internal identifier, not an email address.
+
+The Firefox-specific data-collection declaration uses `none` because the
+extension does not collect or transmit personal user data for storage or
+processing. Network requests only retrieve public stocking information, and
+favorites remain in Firefox's local extension storage.
+
 ## Current limitations
 
 - Stocking data and coordinates are limited to what CDFW publishes.
@@ -187,4 +198,5 @@ current location.
 
 - Add extension icons and screenshots.
 - Complete the updated manual Firefox test checklist.
+- Run Mozilla's extension linter.
 - Package the extension for a portfolio release or Firefox Add-ons submission.

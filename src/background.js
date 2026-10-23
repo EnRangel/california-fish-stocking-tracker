@@ -1,1 +1,0 @@
-// Background data fetching and caching will be added in a later step.

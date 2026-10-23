@@ -1,6 +1,6 @@
 {
   "name": "fishingextension",
-  "version": "1.0.0",
+  "version": "0.1.0",
   "description": "A Firefox toolbar popup for recent and upcoming California fish stocking information.",
   "scripts": {
     "test": "node --test"
@@ -10,7 +10,7 @@
     "url": "git+https://github.com/EnRangel/fishingExtension.git"
   },
   "keywords": [],
-  "author": "",
+  "author": "EnRangel",
   "license": "ISC",
   "type": "module",
   "bugs": {
