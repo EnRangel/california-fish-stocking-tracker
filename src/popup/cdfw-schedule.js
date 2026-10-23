@@ -1,3 +1,8 @@
+import {
+  fetchWithTimeout,
+  readTextWithLimit
+} from "./network-utils.js";
+
 // -----------------------------------------------------------------------------
 // Live CDFW schedule configuration
 // -----------------------------------------------------------------------------
@@ -6,6 +11,26 @@
 // It is the source of truth for the current week and the next future week.
 const CDFW_SCHEDULE_URL =
   "https://www.nrm.dfg.ca.gov/FishPlants/PublicPlantSearch";
+
+// The real schedule is much smaller than this. The limit prevents an
+// unexpectedly large response from being passed through the HTML parser.
+const MAX_SCHEDULE_CHARACTER_COUNT = 2_000_000;
+
+// Convert a numeric HTML entity into a character without allowing an invalid
+// Unicode number to crash the entire schedule parser.
+function createCharacterFromCodePoint(characterCode) {
+  const isValidCodePoint =
+    Number.isInteger(characterCode) &&
+    characterCode >= 0 &&
+    characterCode <= 0x10ffff;
+
+  if (!isValidCodePoint) {
+    // The replacement character visibly marks text that could not be decoded.
+    return "\ufffd";
+  }
+
+  return String.fromCodePoint(characterCode);
+}
 
 // Convert text such as "10/25/2026" into "2026-10-25".
 function convertUsDateToIso(dateText) {
@@ -67,7 +92,7 @@ function decodeHtmlEntities(encodedText) {
       const characterCode =
         Number.parseInt(hexadecimalValue, 16);
 
-      return String.fromCodePoint(characterCode);
+      return createCharacterFromCodePoint(characterCode);
     }
   );
 
@@ -78,7 +103,7 @@ function decodeHtmlEntities(encodedText) {
       const characterCode =
         Number.parseInt(decimalValue, 10);
 
-      return String.fromCodePoint(characterCode);
+      return createCharacterFromCodePoint(characterCode);
     }
   );
 
@@ -162,6 +187,15 @@ export function parseCdfwScheduleHtml(
   htmlText,
   currentDate = new Date()
 ) {
+  if (
+    typeof htmlText !== "string" ||
+    htmlText.length > MAX_SCHEDULE_CHARACTER_COUNT
+  ) {
+    throw new Error(
+      "CDFW schedule response exceeded the size limit"
+    );
+  }
+
   // Target the results table by ID so unrelated layout tables are ignored.
   const scheduleTableMatch = htmlText.match(
     /<table[^>]*id=["']fishPlantsExternal["'][^>]*>([\s\S]*?)<\/table>/i
@@ -235,8 +269,16 @@ export function parseCdfwScheduleHtml(
     const plantingWeekStartText =
       dateRangeText.slice(0, dateSeparatorIndex);
 
-    const plantingWeekStart =
-      convertUsDateToIso(plantingWeekStartText);
+    let plantingWeekStart;
+
+    try {
+      plantingWeekStart =
+        convertUsDateToIso(plantingWeekStartText);
+    } catch (error) {
+      // One malformed row should not prevent valid schedule rows from loading.
+      skippedRowCount += 1;
+      continue;
+    }
 
     // Remove the nested map link before extracting the water name.
     const waterCellWithoutMapLink =
@@ -289,15 +331,22 @@ export function parseCdfwScheduleHtml(
 // Download and parse CDFW's current/future public schedule.
 export async function fetchCdfwScheduleRecords() {
   const scheduleUrl = createCdfwScheduleUrl();
-  const response = await fetch(scheduleUrl);
 
-  if (!response.ok) {
-    throw new Error(
-      `CDFW schedule request failed with status ${response.status}`
-    );
-  }
+  const htmlText = await fetchWithTimeout(
+    scheduleUrl,
+    async (response) => {
+      if (!response.ok) {
+        throw new Error(
+          `CDFW schedule request failed with status ${response.status}`
+        );
+      }
 
-  const htmlText = await response.text();
+      return readTextWithLimit(
+        response,
+        MAX_SCHEDULE_CHARACTER_COUNT
+      );
+    }
+  );
   const scheduleRecords =
     parseCdfwScheduleHtml(htmlText);
 

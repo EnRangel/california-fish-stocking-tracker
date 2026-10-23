@@ -1,0 +1,50 @@
+/* Give the standalone privacy page a comfortable reading width. */
+body {
+  margin: 0;
+  color: #1f2933;
+  background-color: #f4f8fa;
+  font-family: Arial, sans-serif;
+  line-height: 1.6;
+}
+
+/* Center the policy and keep long lines readable on wide screens. */
+.privacy-page {
+  max-width: 760px;
+  margin: 32px auto;
+  padding: 24px;
+  border: 1px solid #cbd5e1;
+  border-radius: 10px;
+  background-color: white;
+}
+
+.privacy-page h1,
+.privacy-page h2 {
+  color: #164e63;
+}
+
+.privacy-page h1 {
+  margin-top: 0;
+}
+
+.privacy-page h2 {
+  margin-top: 24px;
+  font-size: 19px;
+}
+
+.privacy-page a {
+  color: #0369a1;
+}
+
+.privacy-page a:focus,
+.privacy-page a:hover {
+  text-decoration-thickness: 2px;
+}
+
+/* Remove the card-like outer spacing on narrow screens. */
+@media (max-width: 600px) {
+  .privacy-page {
+    margin: 0;
+    border: 0;
+    border-radius: 0;
+  }
+}

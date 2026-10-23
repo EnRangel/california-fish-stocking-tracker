@@ -174,6 +174,54 @@ test("rejects a stocking with an invalid coordinate", () => {
   );
 });
 
+// Verify that finite numbers outside Earth's coordinate ranges are rejected.
+test("rejects a stocking with an out-of-range coordinate", () => {
+  const stockingOutsideEarth = {
+    waterId: 123,
+    waterName: "June Lake",
+    fishType: "Rainbow Trout",
+    counties: "Mono",
+    plantingWeekStart: "2026-10-19",
+    latitude: 120,
+    longitude: -119.075,
+    status: "future"
+  };
+
+  assert.equal(
+    isUsableStocking(stockingOutsideEarth),
+    false
+  );
+});
+
+// Verify that status and date values must match the application's data model.
+test("rejects an unknown status and an impossible date", () => {
+  const invalidStocking = {
+    waterId: 123,
+    waterName: "June Lake",
+    fishType: "Rainbow Trout",
+    counties: "Mono",
+    plantingWeekStart: "2026-02-30",
+    latitude: 37.779,
+    longitude: -119.075,
+    status: "maybe"
+  };
+
+  assert.equal(
+    isUsableStocking(invalidStocking),
+    false
+  );
+});
+
+// Verify that a malformed ArcGIS feature is filtered instead of crashing.
+test("ignores a CDFW feature without attributes", () => {
+  const actualStocking = normalizeCdfwFeature({});
+
+  assert.equal(
+    isUsableStocking(actualStocking),
+    false
+  );
+});
+
 // Verify that live schedule rows receive coordinates from ArcGIS water data.
 test("adds ArcGIS coordinates to a live schedule record", () => {
   const scheduleRecords = [

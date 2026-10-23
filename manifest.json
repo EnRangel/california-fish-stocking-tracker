@@ -3,6 +3,9 @@
   "name": "California Fish Stocking",
   "version": "0.1.0",
   "description": "Shows recent and upcoming California fish stockings.",
+  "content_security_policy": {
+    "extension_pages": "default-src 'self'; connect-src https://services2.arcgis.com https://www.nrm.dfg.ca.gov; object-src 'none'; base-uri 'none'; form-action 'none'"
+  },
   "icons": {
     "16": "src/icons/ripple-beacon.svg",
     "32": "src/icons/ripple-beacon.svg",

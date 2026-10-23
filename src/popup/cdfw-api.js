@@ -1,3 +1,7 @@
+import {
+  fetchWithTimeout
+} from "./network-utils.js";
+
 // -----------------------------------------------------------------------------
 // CDFW ArcGIS configuration
 // -----------------------------------------------------------------------------
@@ -13,6 +17,11 @@ const RECENT_DAY_COUNT = 60;
 
 // Request a manageable number of records from ArcGIS at one time.
 const CDFW_PAGE_SIZE = 500;
+
+// These limits protect the popup from a broken server that repeatedly claims
+// another page exists. The current CDFW result is far below either limit.
+const MAX_ARCGIS_PAGE_COUNT = 20;
+const MAX_ARCGIS_RECORD_COUNT = 10_000;
 
 // Convert a Date object into the YYYY-MM-DD format expected by ArcGIS.
 function formatDateForArcGis(date) {
@@ -30,7 +39,8 @@ function getUniqueWaterIds(waterIds) {
   const uniqueWaterIds = [];
 
   for (const waterId of waterIds) {
-    const isValidWaterId = Number.isInteger(waterId);
+    const isValidWaterId =
+      Number.isSafeInteger(waterId) && waterId > 0;
     const isAlreadyIncluded =
       uniqueWaterIds.includes(waterId);
 
@@ -53,19 +63,33 @@ async function fetchAllArcGisPages(createQueryUrl) {
   // Start as true because we always need to request the first page.
   let hasMorePages = true;
 
-  while (hasMorePages) {
-    // The supplied function builds the correct query for the current offset.
-    const queryUrl = createQueryUrl(resultOffset);
-    const response = await fetch(queryUrl);
+  // Count completed pages separately from the record offset. A server could
+  // ignore the offset, so checking both values gives us two safety limits.
+  let downloadedPageCount = 0;
 
-    // fetch() does not automatically throw for HTTP errors.
-    if (!response.ok) {
+  while (hasMorePages) {
+    if (downloadedPageCount >= MAX_ARCGIS_PAGE_COUNT) {
       throw new Error(
-        `CDFW request failed with status ${response.status}`
+        "CDFW pagination exceeded the page limit"
       );
     }
 
-    const responseData = await response.json();
+    // The supplied function builds the correct query for the current offset.
+    const queryUrl = createQueryUrl(resultOffset);
+
+    const responseData = await fetchWithTimeout(
+      queryUrl,
+      async (response) => {
+        // fetch() does not automatically throw for HTTP errors.
+        if (!response.ok) {
+          throw new Error(
+            `CDFW request failed with status ${response.status}`
+          );
+        }
+
+        return response.json();
+      }
+    );
 
     // ArcGIS may include an error inside a successful HTTP response.
     if (responseData.error) {
@@ -82,6 +106,15 @@ async function fetchAllArcGisPages(createQueryUrl) {
     }
 
     const pageFeatures = responseData.features;
+
+    if (
+      allFeatures.length + pageFeatures.length >
+      MAX_ARCGIS_RECORD_COUNT
+    ) {
+      throw new Error(
+        "CDFW response exceeded the record limit"
+      );
+    }
 
     for (const feature of pageFeatures) {
       allFeatures.push(feature);
@@ -107,6 +140,7 @@ async function fetchAllArcGisPages(createQueryUrl) {
       responseData.exceededTransferLimit === true;
 
     resultOffset += pageFeatures.length;
+    downloadedPageCount += 1;
   }
 
   return allFeatures;

@@ -5,6 +5,54 @@
 // These functions do not access the DOM, network, or Firefox storage.
 // Keeping them independent makes them easier to understand and test.
 
+// Remote text does not need to be unlimited to describe a stocking record.
+// Length limits reduce memory usage if an upstream response is malformed.
+const MAX_WATER_NAME_LENGTH = 200;
+const MAX_FISH_TYPE_LENGTH = 100;
+const MAX_COUNTIES_LENGTH = 200;
+
+// A Set is useful when we only need to ask whether a value is allowed.
+const ALLOWED_STOCKING_STATUSES = new Set([
+  "recent",
+  "current",
+  "future"
+]);
+
+// Check a required text field without accepting whitespace-only or huge text.
+function isUsableText(value, maximumLength) {
+  return (
+    typeof value === "string" &&
+    value.trim().length > 0 &&
+    value.length <= maximumLength
+  );
+}
+
+// Confirm that a value is a real YYYY-MM-DD calendar date.
+function isValidIsoDate(dateText) {
+  if (
+    typeof dateText !== "string" ||
+    !/^\d{4}-\d{2}-\d{2}$/.test(dateText)
+  ) {
+    return false;
+  }
+
+  const dateParts = dateText.split("-").map(Number);
+  const year = dateParts[0];
+  const month = dateParts[1];
+  const day = dateParts[2];
+
+  // Date.UTC() avoids local time-zone changes while validating the pieces.
+  const dateForValidation = new Date(
+    Date.UTC(year, month - 1, day)
+  );
+
+  return (
+    dateForValidation.getUTCFullYear() === year &&
+    dateForValidation.getUTCMonth() === month - 1 &&
+    dateForValidation.getUTCDate() === day
+  );
+}
+
 // Convert CDFW's announcement period into one of our status values.
 export function normalizeAnnouncementStatus(announcePeriod) {
   const normalizedAnnouncementPeriod =
@@ -26,7 +74,16 @@ export function normalizeAnnouncementStatus(announcePeriod) {
 
 // Convert one raw ArcGIS feature into our application's stocking format.
 export function normalizeCdfwFeature(feature) {
-  const attributes = feature.attributes;
+  // A malformed server record may omit attributes. Using an empty object lets
+  // the normal validation step reject that record instead of crashing.
+  const hasAttributes =
+    feature &&
+    typeof feature.attributes === "object" &&
+    feature.attributes !== null;
+
+  const attributes = hasAttributes
+    ? feature.attributes
+    : {};
 
   return {
     waterId: attributes.StockingWaterID,
@@ -47,28 +104,48 @@ export function normalizeCdfwFeature(feature) {
 
 // Check whether a normalized record has every value needed by the UI.
 export function isUsableStocking(stocking) {
+  if (
+    typeof stocking !== "object" ||
+    stocking === null
+  ) {
+    return false;
+  }
+
   const hasWaterId =
-    Number.isInteger(stocking.waterId);
+    Number.isSafeInteger(stocking.waterId) &&
+    stocking.waterId > 0;
 
   const hasWaterName =
-    typeof stocking.waterName === "string" &&
-    stocking.waterName.length > 0;
+    isUsableText(
+      stocking.waterName,
+      MAX_WATER_NAME_LENGTH
+    );
 
   const hasFishType =
-    typeof stocking.fishType === "string" &&
-    stocking.fishType.length > 0;
+    isUsableText(
+      stocking.fishType,
+      MAX_FISH_TYPE_LENGTH
+    );
 
   const hasCounties =
-    typeof stocking.counties === "string" &&
-    stocking.counties.length > 0;
+    isUsableText(
+      stocking.counties,
+      MAX_COUNTIES_LENGTH
+    );
 
   const hasPlantingWeek =
-    typeof stocking.plantingWeekStart === "string" &&
-    stocking.plantingWeekStart.length > 0;
+    isValidIsoDate(stocking.plantingWeekStart);
 
   const hasCoordinates =
     Number.isFinite(stocking.latitude) &&
-    Number.isFinite(stocking.longitude);
+    stocking.latitude >= -90 &&
+    stocking.latitude <= 90 &&
+    Number.isFinite(stocking.longitude) &&
+    stocking.longitude >= -180 &&
+    stocking.longitude <= 180;
+
+  const hasAllowedStatus =
+    ALLOWED_STOCKING_STATUSES.has(stocking.status);
 
   return (
     hasWaterId &&
@@ -76,7 +153,8 @@ export function isUsableStocking(stocking) {
     hasFishType &&
     hasCounties &&
     hasPlantingWeek &&
-    hasCoordinates
+    hasCoordinates &&
+    hasAllowedStatus
   );
 }
 
@@ -117,15 +195,30 @@ export function normalizeCdfwScheduleRecords(
   const locationsByWaterId = new Map();
 
   for (const locationFeature of locationFeatures) {
+    const hasAttributes =
+      locationFeature &&
+      typeof locationFeature.attributes === "object" &&
+      locationFeature.attributes !== null;
+
+    // Ignore a malformed location instead of interrupting every record.
+    if (!hasAttributes) {
+      continue;
+    }
+
     const attributes = locationFeature.attributes;
     const waterId = Number(attributes.StockingWaterID);
     const latitude = Number(attributes.Lat);
     const longitude = Number(attributes.Lon);
 
     const hasValidLocation =
-      Number.isInteger(waterId) &&
+      Number.isSafeInteger(waterId) &&
+      waterId > 0 &&
       Number.isFinite(latitude) &&
-      Number.isFinite(longitude);
+      latitude >= -90 &&
+      latitude <= 90 &&
+      Number.isFinite(longitude) &&
+      longitude >= -180 &&
+      longitude <= 180;
 
     if (
       hasValidLocation &&

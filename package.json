@@ -3,7 +3,9 @@
   "version": "0.1.0",
   "description": "A Firefox toolbar popup for recent and upcoming California fish stocking information.",
   "scripts": {
-    "test": "node --test"
+    "test": "node --test",
+    "lint:extension": "web-ext lint",
+    "build:extension": "web-ext build --overwrite-dest"
   },
   "repository": {
     "type": "git",
@@ -16,5 +18,26 @@
   "bugs": {
     "url": "https://github.com/EnRangel/fishingExtension/issues"
   },
-  "homepage": "https://github.com/EnRangel/fishingExtension#readme"
+  "homepage": "https://github.com/EnRangel/fishingExtension#readme",
+  "webExt": {
+    "sourceDir": ".",
+    "artifactsDir": "web-ext-artifacts",
+    "ignoreFiles": [
+      "docs",
+      "docs/**",
+      "test",
+      "test/**",
+      "vendor",
+      "vendor/**",
+      "node_modules/**",
+      "web-ext-artifacts/**",
+      "package.json",
+      "package-lock.json",
+      "README.md",
+      ".gitignore"
+    ]
+  },
+  "devDependencies": {
+    "web-ext": "^10.8.0"
+  }
 }

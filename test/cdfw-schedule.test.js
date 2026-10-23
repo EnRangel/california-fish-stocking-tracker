@@ -137,3 +137,49 @@ test("throws when the live schedule request fails", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+// Verify that malformed dates are skipped without hiding valid schedule rows.
+test("skips a schedule row with an impossible date", () => {
+  const scheduleHtml = `
+    <table id="fishPlantsExternal">
+      <tbody>
+        <tr>
+          <td>15/40/2026-15/46/2026</td>
+          <td>Bad Date Lake <a href="?stockid=1">Map</a></td>
+          <td>Mono</td>
+          <td>Trout</td>
+        </tr>
+        <tr>
+          <td>10/25/2026-10/31/2026</td>
+          <td>Doane Pond <a href="?stockid=27445">Map</a></td>
+          <td>San Diego</td>
+          <td>Trout</td>
+        </tr>
+      </tbody>
+    </table>
+  `;
+
+  const currentDate = new Date(2026, 9, 21);
+  const actualRecords = parseCdfwScheduleHtml(
+    scheduleHtml,
+    currentDate
+  );
+
+  assert.equal(actualRecords.length, 1);
+  assert.equal(actualRecords[0].waterName, "Doane Pond");
+});
+
+// Verify that the parser rejects a document above its two-million-character
+// safety limit before attempting regular-expression parsing.
+test("rejects an oversized schedule document", () => {
+  const oversizedHtml = "x".repeat(2_000_001);
+
+  assert.throws(
+    () => {
+      parseCdfwScheduleHtml(oversizedHtml);
+    },
+    {
+      message: "CDFW schedule response exceeded the size limit"
+    }
+  );
+});

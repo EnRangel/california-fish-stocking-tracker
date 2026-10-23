@@ -7,6 +7,9 @@ The extension opens as a toolbar popup. It shows stocking information in a
 searchable list and provides a Google Maps link for each water body's published
 coordinates.
 
+This is an independent project and is not affiliated with or endorsed by the
+California Department of Fish and Wildlife or the State of California.
+
 ## Features
 
 - Shows recently stocked waters from the previous 60 days.
@@ -47,6 +50,10 @@ coordinates:
 The live fish planting schedule supplies the current week and future week:
 
 <https://www.nrm.dfg.ca.gov/FishPlants/PublicPlantSearch>
+
+The official catalog identifies **Planting Location - CDFW [ds2897]** as a
+public CC BY dataset. Attribution and transformation details are recorded in
+[THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
 
 The two sources are joined through the numeric `StockingWaterID` embedded in
 the schedule's water-body links.
@@ -146,7 +153,13 @@ After restarting Firefox, load `manifest.json` again.
 
 ## Run the tests
 
-The tests use Node's built-in test runner, so no testing framework is required.
+Install the development tools after cloning the repository:
+
+```powershell
+npm install
+```
+
+The unit tests use Node's built-in test runner:
 
 ```powershell
 npm test
@@ -162,6 +175,30 @@ The current tests cover:
 - cache expiration rules;
 - loading a valid cache through a mocked Firefox storage API.
 
+## Check and package the extension
+
+Mozilla's `web-ext` tool is installed as a development dependency. It is used
+only while developing and packaging the project; it is not included in the
+extension installed by Firefox users.
+
+Check the manifest and extension source for Mozilla-specific problems:
+
+```powershell
+npm run lint:extension
+```
+
+Create the uploadable ZIP archive:
+
+```powershell
+npm run build:extension
+```
+
+The build command places the ZIP inside `web-ext-artifacts/`. That generated
+folder is ignored by Git. The package excludes tests, personal documentation,
+Node development files, and repository files. It includes `manifest.json`, the
+runtime files under `src/`, and the public license, privacy, and attribution
+notices.
+
 ## Extension permissions
 
 The manifest requests only the permissions needed by the current features:
@@ -172,6 +209,24 @@ The manifest requests only the permissions needed by the current features:
 
 The extension does not require a user account and does not request the user's
 current location.
+
+Network requests use HTTPS, omit browser credentials, and do not include the
+user's search text or favorites. Requests time out after 15 seconds. ArcGIS
+pagination, record counts, schedule response size, and stored data are also
+bounded so a malformed response cannot make the popup download indefinitely.
+
+## Privacy
+
+The extension does not create or read cookies and contains no advertising,
+analytics, tracking pixels, or user accounts. Favorite water IDs and cached
+public stocking records stay in Firefox's local extension storage.
+
+The complete policy is available in [PRIVACY.md](PRIVACY.md) and from the
+Privacy link in the popup.
+
+Opening the popup contacts CDFW and ArcGIS to retrieve public data. Google Maps
+is contacted only after the user selects a map link. The extension developer
+does not receive the user's network requests, searches, or favorites.
 
 ## Firefox release metadata
 
@@ -201,5 +256,4 @@ favorites remain in Firefox's local extension storage.
 
 - Add extension screenshots.
 - Complete the updated manual Firefox test checklist.
-- Run Mozilla's extension linter.
-- Package the extension for a portfolio release or Firefox Add-ons submission.
+- Submit the checked package for a portfolio release or Firefox Add-ons review.
