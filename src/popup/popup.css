@@ -219,4 +219,28 @@ body {
   margin: 20px 8px;
   color: #64748b;
   text-align: center;
-} 
+}
+
+/* Separate source attribution from the interactive stocking list. */
+.popup-footer {
+  padding: 10px 12px;
+  border-top: 1px solid #cbd5e1;
+  color: #475569;
+  background-color: white;
+  font-size: 11px;
+  text-align: center;
+}
+
+.popup-footer p {
+  margin: 0;
+}
+
+/* Keep attribution and privacy links visible for keyboard and mouse users. */
+.popup-footer a {
+  color: #0369a1;
+}
+
+.popup-footer a:focus,
+.popup-footer a:hover {
+  text-decoration-thickness: 2px;
+}

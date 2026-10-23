@@ -235,3 +235,48 @@ test("throws when ArcGIS returns an API error", async () => {
     globalThis.fetch = originalFetch;
   }
 });
+
+// Verify that a broken server cannot make pagination continue forever.
+test("stops pagination after the safety limit", async () => {
+  const originalFetch = globalThis.fetch;
+  let requestCount = 0;
+
+  // Every fake page contains one item and incorrectly claims another page is
+  // available. Production code must eventually stop requesting more pages.
+  globalThis.fetch = async () => {
+    requestCount += 1;
+
+    return {
+      ok: true,
+      status: 200,
+      json: async () => {
+        return {
+          features: [
+            {
+              attributes: {
+                StockingWaterID: requestCount
+              }
+            }
+          ],
+          exceededTransferLimit: true
+        };
+      }
+    };
+  };
+
+  try {
+    await assert.rejects(
+      async () => {
+        await fetchCdfwFeatures();
+      },
+      {
+        message: "CDFW pagination exceeded the page limit"
+      }
+    );
+
+    // The limit is 20, so a twenty-first request must never be made.
+    assert.equal(requestCount, 20);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
+});

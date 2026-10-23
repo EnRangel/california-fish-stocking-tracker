@@ -6,7 +6,9 @@ import assert from "node:assert/strict";
 
 import {
   isStockingCacheFresh,
+  loadFavoriteWaterIds,
   loadStockingCache,
+  saveFavoriteWaterIds,
   saveStockingCache
 } from "../src/popup/storage.js";
 
@@ -73,7 +75,13 @@ test("loads a valid stocking cache", async () => {
   const savedRecords = [
     {
       waterId: 123,
-      waterName: "June Lake"
+      waterName: "June Lake",
+      fishType: "Rainbow Trout",
+      counties: "Mono",
+      plantingWeekStart: "2026-10-19",
+      latitude: 37.779,
+      longitude: -119.075,
+      status: "recent"
     }
   ];
 
@@ -366,7 +374,13 @@ test("saves a version 2 stocking cache", async () => {
   const recordsToSave = [
     {
       waterId: 27445,
-      waterName: "Doane Pond"
+      waterName: "Doane Pond",
+      fishType: "Trout",
+      counties: "San Diego",
+      plantingWeekStart: "2026-10-25",
+      latitude: 33.340149,
+      longitude: -116.901329,
+      status: "future"
     }
   ];
 
@@ -419,6 +433,89 @@ test("saves a version 2 stocking cache", async () => {
         stockingCache: returnedCache
       }
     );
+  } finally {
+    globalThis.browser = originalBrowser;
+  }
+});
+
+// Verify that each record inside a saved cache must still be safe to display.
+test("returns null when a cached record is incomplete", async () => {
+  const originalBrowser = globalThis.browser;
+
+  globalThis.browser = {
+    storage: {
+      local: {
+        get: async () => {
+          return {
+            stockingCache: {
+              version: 2,
+              records: [
+                {
+                  waterId: 123,
+                  waterName: "Missing most required fields"
+                }
+              ],
+              fetchedAt: Date.now()
+            }
+          };
+        }
+      }
+    }
+  };
+
+  try {
+    const actualCache = await loadStockingCache();
+    assert.equal(actualCache, null);
+  } finally {
+    globalThis.browser = originalBrowser;
+  }
+});
+
+// Verify that favorite IDs loaded from storage are validated and deduplicated.
+test("cleans favorite water IDs loaded from storage", async () => {
+  const originalBrowser = globalThis.browser;
+
+  globalThis.browser = {
+    storage: {
+      local: {
+        get: async () => {
+          return {
+            favoriteWaterIds: [27445, -1, 27445, "123", 12343]
+          };
+        }
+      }
+    }
+  };
+
+  try {
+    const actualWaterIds = await loadFavoriteWaterIds();
+    assert.deepEqual(actualWaterIds, [27445, 12343]);
+  } finally {
+    globalThis.browser = originalBrowser;
+  }
+});
+
+// Verify that invalid values are also removed before favorites are saved.
+test("saves only valid favorite water IDs", async () => {
+  const originalBrowser = globalThis.browser;
+  let savedData;
+
+  globalThis.browser = {
+    storage: {
+      local: {
+        set: async (dataToStore) => {
+          savedData = dataToStore;
+        }
+      }
+    }
+  };
+
+  try {
+    await saveFavoriteWaterIds([27445, null, 27445, 12343]);
+
+    assert.deepEqual(savedData, {
+      favoriteWaterIds: [27445, 12343]
+    });
   } finally {
     globalThis.browser = originalBrowser;
   }
