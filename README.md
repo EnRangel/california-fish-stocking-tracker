@@ -146,7 +146,13 @@ After restarting Firefox, load `manifest.json` again.
 
 ## Run the tests
 
-The tests use Node's built-in test runner, so no testing framework is required.
+Install the development tools after cloning the repository:
+
+```powershell
+npm install
+```
+
+The unit tests use Node's built-in test runner:
 
 ```powershell
 npm test
@@ -161,6 +167,29 @@ The current tests cover:
 - case-insensitive stocking search;
 - cache expiration rules;
 - loading a valid cache through a mocked Firefox storage API.
+
+## Check and package the extension
+
+Mozilla's `web-ext` tool is installed as a development dependency. It is used
+only while developing and packaging the project; it is not included in the
+extension installed by Firefox users.
+
+Check the manifest and extension source for Mozilla-specific problems:
+
+```powershell
+npm run lint:extension
+```
+
+Create the uploadable ZIP archive:
+
+```powershell
+npm run build:extension
+```
+
+The build command places the ZIP inside `web-ext-artifacts/`. That generated
+folder is ignored by Git. The package excludes tests, personal documentation,
+Node development files, and repository files because Firefox only needs
+`manifest.json` and the runtime files under `src/`.
 
 ## Extension permissions
 
@@ -201,5 +230,4 @@ favorites remain in Firefox's local extension storage.
 
 - Add extension screenshots.
 - Complete the updated manual Firefox test checklist.
-- Run Mozilla's extension linter.
-- Package the extension for a portfolio release or Firefox Add-ons submission.
+- Submit the checked package for a portfolio release or Firefox Add-ons review.
