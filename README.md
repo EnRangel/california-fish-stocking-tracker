@@ -105,6 +105,8 @@ fishingExtension/
 |-- manifest.json
 |-- package.json
 |-- src/
+|   |-- icons/
+|   |   `-- ripple-beacon.svg
 |   `-- popup/
 |       |-- index.html
 |       |-- popup.css
@@ -128,6 +130,7 @@ The main responsibilities are separated as follows:
 - `stocking-utils.js` normalizes, joins, validates, searches, and formats
   records.
 - `storage.js` reads and writes the cache and favorites through Firefox storage.
+- `ripple-beacon.svg` supplies the scalable extension and toolbar icon.
 
 ## Run the extension locally
 
@@ -196,7 +199,7 @@ favorites remain in Firefox's local extension storage.
 
 ## Planned finishing work
 
-- Add extension icons and screenshots.
+- Add extension screenshots.
 - Complete the updated manual Firefox test checklist.
 - Run Mozilla's extension linter.
 - Package the extension for a portfolio release or Firefox Add-ons submission.

@@ -3,6 +3,13 @@
   "name": "California Fish Stocking",
   "version": "0.1.0",
   "description": "Shows recent and upcoming California fish stockings.",
+  "icons": {
+    "16": "src/icons/ripple-beacon.svg",
+    "32": "src/icons/ripple-beacon.svg",
+    "48": "src/icons/ripple-beacon.svg",
+    "96": "src/icons/ripple-beacon.svg",
+    "128": "src/icons/ripple-beacon.svg"
+  },
   "browser_specific_settings": {
     "gecko": {
       "id": "california-fish-stocking@enrangel",
@@ -22,6 +29,10 @@
   ],
   "action": {
     "default_title": "View California fish stockings",
+    "default_icon": {
+      "16": "src/icons/ripple-beacon.svg",
+      "32": "src/icons/ripple-beacon.svg"
+    },
     "default_popup": "src/popup/index.html"
   }
 }
