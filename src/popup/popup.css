@@ -11,9 +11,19 @@ body {
 }
 
 .popup-header {
-  padding: 16px;
+  /* A positioned parent lets the icon and waves sit inside this header. */
+  position: relative;
+  min-height: 112px;
+  padding: 18px 72px 42px 16px;
+  overflow: hidden;
   color: white;
-  background-color: #164e63;
+  background: linear-gradient(135deg, #164e63 0%, #0369a1 55%, #0e7490 100%);
+}
+
+/* Keep the heading in front of every decorative header layer. */
+.header-copy {
+  position: relative;
+  z-index: 2;
 }
 
 .popup-header h1 {
@@ -24,6 +34,43 @@ body {
 .popup-header p {
   margin: 4px 0 0;
   font-size: 14px;
+}
+
+/* Display the existing extension logo without adding another image asset. */
+.header-icon {
+  position: absolute;
+  top: 14px;
+  right: 16px;
+  z-index: 2;
+  width: 46px;
+  height: 46px;
+  filter: drop-shadow(0 3px 4px rgb(8 47 73 / 30%));
+}
+
+/* Stretch the SVG across the header so its paths form a full-width shoreline. */
+.header-waves {
+  position: absolute;
+  right: 0;
+  bottom: -1px;
+  left: 0;
+  z-index: 1;
+  width: 100%;
+  height: 43px;
+  pointer-events: none;
+}
+
+/* The rear layers use translucent blues so they look farther away. */
+.header-wave--back {
+  fill: rgb(125 211 252 / 35%);
+}
+
+.header-wave--middle {
+  fill: rgb(186 230 253 / 68%);
+}
+
+/* White connects the front wave cleanly to the controls below the header. */
+.header-wave--front {
+  fill: white;
 }
 
 /* Place the cache timestamp and refresh button on the same row. */
