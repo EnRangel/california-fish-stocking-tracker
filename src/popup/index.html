@@ -11,10 +11,46 @@
 
   <body>
     <header class="popup-header">
-      <h1>California Fish Stocking</h1>
-      <p>Find recently stocked waters</p>
+      <!-- Keep the title above the decorative water layers by grouping the
+           readable header content in its own container. -->
+      <div class="header-copy">
+        <h1>California Fish Stocking</h1>
+        <p>Find recently stocked waters</p>
+      </div>
+
+      <!-- Reuse the extension icon as a decorative brand mark. An empty alt
+           value prevents a screen reader from repeating the nearby title. -->
+      <img
+        class="header-icon"
+        src="../icons/ripple-beacon.svg"
+        alt=""
+        aria-hidden="true"
+      >
+
+      <!-- These SVG paths draw three overlapping water layers. The SVG is
+           decorative, so assistive technology does not need to announce it. -->
+      <svg
+        class="header-waves"
+        viewBox="0 0 380 42"
+        preserveAspectRatio="none"
+        aria-hidden="true"
+      >
+        <path
+          class="header-wave header-wave--back"
+          d="M0 14 C40 2 80 28 125 16 C170 4 210 30 255 16 C300 2 340 28 380 14 V42 H0 Z"
+        ></path>
+        <path
+          class="header-wave header-wave--middle"
+          d="M0 23 C45 8 75 35 120 22 C165 10 200 36 245 22 C290 9 335 35 380 21 V42 H0 Z"
+        ></path>
+        <path
+          class="header-wave header-wave--front"
+          d="M0 31 C50 16 80 41 130 28 C180 16 215 41 265 28 C315 16 345 39 380 29 V42 H0 Z"
+        ></path>
+      </svg>
     </header>
-<!-- Show when the data was downloaded and let the user request fresh data. -->
+
+    <!-- Show when the data was downloaded and let the user request fresh data. -->
     <div class="data-controls">
       <p class="last-updated">
         Last updated:
