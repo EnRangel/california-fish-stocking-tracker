@@ -1,7 +1,7 @@
 {
-  "name": "fishingextension",
+  "name": "california-fish-stocking-tracker",
   "version": "0.1.0",
-  "description": "A Firefox toolbar popup for recent and upcoming California fish stocking information.",
+  "description": "A Firefox toolbar tracker for recent and upcoming California fish stocking information.",
   "scripts": {
     "test": "node --test",
     "lint:extension": "web-ext lint",

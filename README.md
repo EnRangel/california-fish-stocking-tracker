@@ -1,4 +1,4 @@
-# California Fish Stocking
+# California Fish Stocking Tracker
 
 A Firefox extension for browsing recent and upcoming fish stocking information
 published by the California Department of Fish and Wildlife (CDFW).

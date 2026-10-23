@@ -2,9 +2,9 @@
 
 Effective date: October 23, 2026
 
-California Fish Stocking is an independent, unofficial Firefox extension. The
-developer does not collect, receive, sell, or share personal information
-through the extension.
+California Fish Stocking Tracker is an independent, unofficial Firefox
+extension. The developer does not collect, receive, sell, or share personal
+information through the extension.
 
 ## Information stored in Firefox
 
