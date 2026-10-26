@@ -108,7 +108,7 @@ API key.
 ## Project structure
 
 ```text
-fishingExtension/
+california-fish-stocking-tracker/
 |-- manifest.json
 |-- package.json
 |-- src/
@@ -120,11 +120,15 @@ fishingExtension/
 |       |-- popup.js
 |       |-- cdfw-api.js
 |       |-- cdfw-schedule.js
+|       |-- network-utils.js
+|       |-- privacy.html
+|       |-- privacy.css
 |       |-- stocking-utils.js
 |       `-- storage.js
 `-- test/
     |-- cdfw-api.test.js
     |-- cdfw-schedule.test.js
+    |-- network-utils.test.js
     |-- stocking-utils.test.js
     `-- storage.test.js
 ```
@@ -134,6 +138,10 @@ The main responsibilities are separated as follows:
 - `popup.js` coordinates state, events, and rendering.
 - `cdfw-api.js` downloads recent ArcGIS records and water coordinates.
 - `cdfw-schedule.js` downloads and parses the live current/future schedule.
+- `network-utils.js` applies shared privacy, timeout, and response-size rules to
+  network requests.
+- `privacy.html` and `privacy.css` provide the privacy policy available from the
+  popup.
 - `stocking-utils.js` normalizes, joins, validates, searches, and formats
   records.
 - `storage.js` reads and writes the cache and favorites through Firefox storage.
@@ -172,6 +180,7 @@ The current tests cover:
 - coordinate joining and duplicate-event removal;
 - announcement-status normalization;
 - case-insensitive stocking search;
+- network request privacy settings, timeouts, and response-size limits;
 - cache expiration rules;
 - loading a valid cache through a mocked Firefox storage API.
 
@@ -252,8 +261,11 @@ favorites remain in Firefox's local extension storage.
 - Favorites are stored only in the current Firefox extension installation.
 - The extension is currently designed and tested for Firefox.
 
-## Planned finishing work
+## Release status
 
-- Add extension screenshots.
-- Complete the updated manual Firefox test checklist.
-- Submit the checked package for a portfolio release or Firefox Add-ons review.
+Version `0.1.0` was submitted to Mozilla Add-ons on October 26, 2026 and is
+awaiting review. The public installation link will be added here after Mozilla
+publishes the listing.
+
+The source code remains available for local installation and testing by using
+the steps in [Run the extension locally](#run-the-extension-locally).
