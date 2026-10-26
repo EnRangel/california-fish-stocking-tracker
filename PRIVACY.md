@@ -45,4 +45,4 @@ released.
 
 Privacy questions can be submitted through the repository's issue tracker:
 
-<https://github.com/EnRangel/fishingExtension/issues>
+<https://github.com/EnRangel/california-fish-stocking-tracker/issues>
